@@ -1,5 +1,3 @@
-#include <iostream>
-#include <vector>
 #include <cstdint>
 
 class Registrador {
@@ -12,9 +10,9 @@ public:
         return registradores[reg];
     }
 
-    void escrever(int reg, uint32_t value) {
+    void escrever(int reg, uint32_t valor) {
         if (reg != 0 && reg < 32) {
-            registradores[reg] = value; // não pode escrever no registrador 0 pq ele e sempre 0;
+            registradores[reg] = valor; // não pode escrever no registrador 0 pq ele e sempre 0;
         }
     }
 };
