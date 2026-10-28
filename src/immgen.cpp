@@ -1,13 +1,13 @@
-#include <cstdint>
+#include "immgen.h"
 
 // Função para estender o sinal de um valor de 'bits' bits para 32 bits
-int32_t signExt(uint32_t valor, int bits) {
+std::int32_t signExt(std::uint32_t valor, int bits) {
     int shift = 32 - bits;
-    return static_cast<int32_t>(valor << shift) >> shift;
+    return static_cast<std::int32_t>(valor << shift) >> shift;
 }
 
-int32_t immgen(uint32_t instruction) {
-    uint32_t opcode = instruction & 0x7F;
+std::int32_t immgen(std::uint32_t instruction) {
+    std::uint32_t opcode = instruction & 0x7F;
 
     switch (opcode) {
         case 3:    // load
@@ -27,7 +27,7 @@ int32_t immgen(uint32_t instruction) {
 
         case 23:   // auipc
         case 55:   // lui
-            return static_cast<int32_t>(instruction & 0xFFFFF000);    // U-type
+            return static_cast<std::int32_t>(instruction & 0xFFFFF000); // U-type
 
         case 111:  // jal
             return signExt((((instruction >> 31) & 0x1)   << 20) |

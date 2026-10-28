@@ -1,18 +1,12 @@
-#include <cstdint>
-
-class Registrador {
-private:
-    uint32_t registradores[32] = {0};
-
-public:
-    uint32_t ler(int reg) {
-        if (reg >= 32) return 0; // apenas um teste para caso tente acessar um registradir maior que o 32
-        return registradores[reg];
+#include "registrador.h"
+ 
+std::uint32_t Registrador::ler(unsigned reg) const {
+    if (reg >= 32) return 0; // protecao contra indice invalido
+    return registradores[reg];
+}
+ 
+void Registrador::escrever(unsigned reg, std::uint32_t valor) {
+    if (reg != 0 && reg < 32) { // nao pode escrever em x0, ele e sempre 0
+        registradores[reg] = valor;
     }
-
-    void escrever(int reg, uint32_t valor) {
-        if (reg != 0 && reg < 32) {
-            registradores[reg] = valor; // não pode escrever no registrador 0 porque ele é sempre 0;
-        }
-    }
-};
+}
