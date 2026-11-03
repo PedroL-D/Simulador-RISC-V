@@ -1,4 +1,6 @@
 /*
+Escolha do cálculo a ser realizado na ULA
+
  Variaveis locais:
  - 'instrucao.opcode' acessa o campo opcode da estrutura.
  - 'funct3' e 'funct7' são sópias dos campos correspondentes
@@ -9,7 +11,7 @@
     Ex: addi x3, x1, 10
     Os bits de funct7 fazem parte do imediato, exceto nos shifts,  - caso de imagiato negativo - nao obriga a ser zero
     As instrucoes reutilizam operacoes que a ULA ja possui
-    O controle principal que será responsael pela origem.
+    A UC que será responsael pela origem
     SLLI é um caso especial:
         - para desloc imediatos a interpretacao muda
             bits 31 a 25: identificam/validam a operação
