@@ -13,9 +13,18 @@ private:
 public:
     // 'explicit' evita conversao implicita de um numero para Memoria.
     explicit Memoria(std::size_t tamanho);
- 
-    std::uint32_t ler_palavra(std::uint32_t endereco) const;
-    void escrever_palavra(std::uint32_t endereco, std::uint32_t valor);
+
+    //funções de leitura
+    std::uint32_t load_word(std::uint32_t endereco) const;
+    std::uint32_t load_byte(std::uint32_t endereco) const; 
+    std::uint32_t load_half(std::uint32_t endereco) const;
+    std::uint32_t load_byte_unsigned(std::uint32_t endereco) const;
+    std::uint32_t load_half_unsigned(std::uint32_t endereco) const;
+
+    //funções de escrita
+    void store_word(std::uint32_t endereco, std::uint32_t valor);
+    void store_half(std::uint32_t endereco, std::uint16_t valor);
+    void store_byte(std::uint32_t endereco, std::uint8_t valor);
 };
  
 #endif
