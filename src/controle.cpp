@@ -2,7 +2,7 @@
 Unidade de Controle
 
 Coordenar a execução da instrução
-Suporta as 19 instruçoes aritméticas e lógicas do controle_ula
+Suporta as 19 instruçoes aritméticas e lógicas do controle_ula e LUI
 
 - Decidir de onde vem o primeiro operando: rs1 ou PC
 - Determinar o segundo operando: registrador rs2 ou imediato
@@ -22,6 +22,21 @@ Definir os sinais e implementar à UC
 #include "controle_ula.h"
 
 SinaisControle gerar_controle(const Decoded& instrucao) {
+    // LUI usa o imediato U pronto do immgen: 0 + imediato.
+    // Nao possui rs1/funct3/funct7: esses bits pertencem ao imediato.
+    if (instrucao.opcode == 0x37) {
+        return {
+            OperacaoULA::ADD,
+            OrigemA::ZERO,
+            OrigemB::IMEDIATO,
+            true,
+            false,
+            false,
+            OrigemResultado::ULA,
+            ProximoPC::SEQUENCIAL
+        };
+    }
+
     // Valida opcode/funct3/funct7 antes de devolver qualquer sinal.
     // Reutiliza a interpretacao existente, sem duplicar a tabela de operacoes.
 
