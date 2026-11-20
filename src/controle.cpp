@@ -20,6 +20,7 @@ Definir os sinais e implementar à UC
 
 #include "controle.h"
 #include "controle_ula.h"
+#include <stdexcept>
 
 SinaisControle gerar_controle(const Decoded& instrucao) {
     // LUI usa o imediato U pronto do immgen: 0 + imediato.
@@ -43,6 +44,35 @@ SinaisControle gerar_controle(const Decoded& instrucao) {
     // Identificar a operacao da ULA e verificar se o código pertence ao conjunto suportado
     const OperacaoULA operacao = selecionar_operacao(instrucao);
 
+    switch (instrucao.opcode) {
+        case 0x33: // OP
+            return { operacao, OrigemA::RS1, OrigemB::RS2,
+                     true, false, false,
+                     OrigemResultado::ULA, ProximoPC::SEQUENCIAL };
+
+        case 0x13: // OP-IMM
+            return { operacao, OrigemA::RS1, OrigemB::IMEDIATO,
+                     true, false, false,
+                     OrigemResultado::ULA, ProximoPC::SEQUENCIAL };
+
+        case 0x63: // BRANCH: ULA compara rs1 e rs2, nao escreve em rd
+            return { operacao, OrigemA::RS1, OrigemB::RS2,
+                     false, false, false,
+                     OrigemResultado::ULA, ProximoPC::DESVIO_CONDICIONAL };
+
+        case 0x6F: // JAL: ULA calcula PC + imm; rd recebe PC + 4
+            return { operacao, OrigemA::PC, OrigemB::IMEDIATO,
+                     true, false, false,
+                     OrigemResultado::PC_MAIS_4, ProximoPC::JAL };
+
+        case 0x67: // JALR: ULA calcula rs1 + imm; rd recebe PC + 4
+            return { operacao, OrigemA::RS1, OrigemB::IMEDIATO,
+                     true, false, false,
+                     OrigemResultado::PC_MAIS_4, ProximoPC::JALR };
+    }
+
+    throw std::invalid_argument("Opcode nao suportado pela unidade de controle");
+
     return {
         operacao,
         OrigemA::RS1,
@@ -53,4 +83,16 @@ SinaisControle gerar_controle(const Decoded& instrucao) {
         OrigemResultado::ULA,
         ProximoPC::SEQUENCIAL
     };
+}
+
+bool desvio_tomado(std::uint8_t funct3, std::uint32_t r) {
+    switch (funct3) {
+        case 0x0: return r == 0;  // beq:  rs1 - rs2 == 0
+        case 0x1: return r != 0;  // bne
+        case 0x4: return r == 1;  // blt:  SLT deu 1
+        case 0x5: return r == 0;  // bge:  SLT deu 0
+        case 0x6: return r == 1;  // bltu: SLTU deu 1
+        case 0x7: return r == 0;  // bgeu: SLTU deu 0
+    }
+    return false;
 }

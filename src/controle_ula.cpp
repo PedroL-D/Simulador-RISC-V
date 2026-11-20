@@ -77,7 +77,26 @@ OperacaoULA selecionar_operacao(const Decoded& instrucao) {
                 if (funct7 == 0x20) return OperacaoULA::SRA; // SRAI - preserva sinal
                 break;
         }
+
+        //Operacoes com imediato (formato B)
+    } else if (opcode == 0x63) {
+        switch (funct3) {
+            case 0x0: // beq
+            case 0x1: return OperacaoULA::SUB;   // bne  (resultado 0 -> iguais)
+            case 0x4: // blt
+            case 0x5: return OperacaoULA::SLT;   // bge  (com sinal)
+            case 0x6: // bltu
+            case 0x7: return OperacaoULA::SLTU;  // bgeu (sem sinal)
+        }
+        
+    } else if (opcode == 0x67 || opcode == 0x6F) {
+        return OperacaoULA::ADD; 
+
+    // JAL (formato J): PC + imm
+    } else if (opcode == 0x6F) {
+        return OperacaoULA::ADD;
     }
+    
 
     throw std::invalid_argument(
         "Instrucao invalida ou nao suportada pelo controle da ULA RV32I");

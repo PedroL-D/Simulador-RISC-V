@@ -25,13 +25,12 @@ Definir os sinais e implementar à UC
 #include "ula.h"
 
 // Origens dos valores selecionados pelos multiplexadores da futura CPU.
-enum class OrigemA { RS1, ZERO };
+enum class OrigemA { RS1, ZERO, PC };
 enum class OrigemB { RS2, IMEDIATO };
-enum class OrigemResultado { ULA };
-enum class ProximoPC { SEQUENCIAL }; // PC + 4
+enum class OrigemResultado { ULA, MEMORIA, PC_MAIS_4 };
+enum class ProximoPC { SEQUENCIAL, DESVIO_CONDICIONAL, JAL, JALR };
 
 // Sinais combinacionais: descrevem o que a CPU deve fazer nesta instrucao.
-// Os enums serao ampliados quando houver suporte a memoria e saltos.
 struct SinaisControle {
     OperacaoULA operacao_ula;   // Calculo a ser executado
     OrigemA origem_a;           // Origem do primeiro operando
