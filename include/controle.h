@@ -2,7 +2,7 @@
 Unidade de Controle
 
 Coordenar a execução da instrução
-Suporta as 19 instruçoes aritméticas e lógicas do controle_ula e LUI
+Suporta OP, OP-IMM, LUI, AUIPC, branches, JAL e JALR
 
 - Decidir de onde vem o primeiro operando: rs1 ou PC
 - Determinar o segundo operando: registrador rs2 ou imediato
@@ -42,7 +42,7 @@ struct SinaisControle {
     ProximoPC proximo_pc;       // Escolha do próximo PC
 };
 
-// Suporta as 19 instrucoes OP e OP-IMM do controle da ULA, mais LUI.
+// Suporta OP, OP-IMM, LUI, AUIPC, branches, JAL e JALR.
 // Nao executa a instrucao nem altera registradores, memoria ou PC.
 // Lanca std::invalid_argument se a codificacao for invalida ou nao suportada.
 SinaisControle gerar_controle(const Decoded& instrucao);

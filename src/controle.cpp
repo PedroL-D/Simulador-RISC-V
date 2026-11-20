@@ -2,7 +2,7 @@
 Unidade de Controle
 
 Coordenar a execução da instrução
-Suporta as  19 instruçoes aritméticas e lógicas do controle_ula e as instruções de desvios e saltos (JAL, JALR, BRANCH) e LUI.
+Suporta as  19 instruçoes aritméticas e lógicas do controle_ula e as instruções de desvios e saltos (JAL, JALR, BRANCH) e LUI/AUIPC.
 
 - Decidir de onde vem o primeiro operando: rs1 ou PC
 - Determinar o segundo operando: registrador rs2 ou imediato
@@ -35,6 +35,21 @@ SinaisControle gerar_controle(const Decoded& instrucao) {
             false,
             OrigemResultado::ULA,
             ProximoPC::SEQUENCIAL
+        };
+    }
+
+    // AUIPC soma o imediato U ao PC da propria instrucao, nao ao PC + 4.
+    // Assim como em LUI, os bits de funct3/funct7 fazem parte do imediato.
+    if (instrucao.opcode == 0x17) {
+        return {
+            OperacaoULA::ADD,
+            OrigemA::PC,
+            OrigemB::IMEDIATO,
+            true,  // rd recebe PC atual + imediato.
+            false,
+            false,
+            OrigemResultado::ULA,
+            ProximoPC::SEQUENCIAL // AUIPC nao e um salto.
         };
     }
 
