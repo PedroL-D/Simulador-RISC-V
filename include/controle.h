@@ -47,4 +47,7 @@ struct SinaisControle {
 // Lanca std::invalid_argument se a codificacao for invalida ou nao suportada.
 SinaisControle gerar_controle(const Decoded& instrucao);
 
+// Para branches: decide se o desvio e tomado a partir do resultado da ULA.
+bool desvio_tomado(std::uint8_t funct3, std::uint32_t resultado_ula);
+
 #endif
