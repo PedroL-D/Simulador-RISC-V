@@ -88,13 +88,9 @@ OperacaoULA selecionar_operacao(const Decoded& instrucao) {
             case 0x6: // bltu
             case 0x7: return OperacaoULA::SLTU;  // bgeu (sem sinal)
         }
-        
+        // JAL (formato J): PC + imm
     } else if (opcode == 0x67 || opcode == 0x6F) {
         return OperacaoULA::ADD; 
-
-    // JAL (formato J): PC + imm
-    } else if (opcode == 0x6F) {
-        return OperacaoULA::ADD;
     }
     
 

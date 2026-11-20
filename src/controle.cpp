@@ -2,7 +2,7 @@
 Unidade de Controle
 
 Coordenar a execução da instrução
-Suporta as 19 instruçoes aritméticas e lógicas do controle_ula e LUI
+Suporta as  19 instruçoes aritméticas e lógicas do controle_ula e as instruções de desvios e saltos (JAL, JALR, BRANCH) e LUI.
 
 - Decidir de onde vem o primeiro operando: rs1 ou PC
 - Determinar o segundo operando: registrador rs2 ou imediato
@@ -73,16 +73,6 @@ SinaisControle gerar_controle(const Decoded& instrucao) {
 
     throw std::invalid_argument("Opcode nao suportado pela unidade de controle");
 
-    return {
-        operacao,
-        OrigemA::RS1,
-        instrucao.opcode == 0x13 ? OrigemB::IMEDIATO : OrigemB::RS2,
-        true,  // Escrita em rd habilitada; o banco continua protegendo x0.
-        false, // Nenhuma leitura de dados.
-        false, // Nenhuma escrita de dados.
-        OrigemResultado::ULA,
-        ProximoPC::SEQUENCIAL
-    };
 }
 
 bool desvio_tomado(std::uint8_t funct3, std::uint32_t r) {
