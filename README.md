@@ -17,43 +17,7 @@ O [teste da CPU](tests/teste_cpu.cpp) executa programas em código de máquina e
 
 O [montador](src/montador.cpp) traduz as 37 instruções da tabela abaixo para palavras de 32 bits. Escreva uma instrução por linha, sem comentários. Ele aceita nomes de registradores como `x1` ou `ra` e resolve rótulos de branches e de `jal` quando declarados em uma linha própria, como `laco:`.
 
-Salve este programa como `programa.s` na raiz do repositório. Ele coloca 10 em `x1` e soma 5 para obter 15 em `x2`.
-
-```asm
-addi x1, x0, 10
-addi x2, x1, 5
-```
-
-Em C++, `montar_arquivo` devolve as palavras na ordem do programa. Carregue cada palavra na CPU com intervalo de quatro bytes e execute um passo para cada uma das duas instruções deste exemplo.
-
-```cpp
-#include "cpu.h"
-#include "montador.h"
-#include <iostream>
-
-int main() {
-    CPU cpu(256);                              // 256 bytes de RAM, PC inicial 0
-    std::uint32_t endereco = 0;
-    for (auto palavra : montar_arquivo("programa.s")) {
-        cpu.carregar_instrucao(endereco, palavra);
-        endereco += 4;
-    }
-
-    cpu.passo();
-    cpu.passo();
-    std::cout << "x2 = " << cpu.ler_registrador(2)
-              << ", PC = " << cpu.ler_pc() << '\n';
-}
-```
-
-Salve o exemplo como `exemplo.cpp` na raiz e execute:
-
-```sh
-c++ -std=c++17 -Iinclude src/*.cpp exemplo.cpp -o /tmp/exemplo_riscv
-/tmp/exemplo_riscv
-```
-
-Saída esperada: `x2 = 15, PC = 8`. Os endereços são contados em bytes e cada instrução ocupa quatro bytes.
+<PEDRO vai inserir comentários do montador>
 
 ## Instruções implementadas
 
