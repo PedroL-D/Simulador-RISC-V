@@ -13,18 +13,31 @@ c++ -std=c++17 -Iinclude src/*.cpp tests/teste_cpu.cpp -o /tmp/teste_riscv_cpu
 
 O [teste da CPU](tests/teste_cpu.cpp) executa programas em código de máquina e confere registradores, PC, acessos à memória, desvios, saltos e falhas de acesso.
 
-## Exemplo de uso
+## Do Assembly à execução
 
-O programa abaixo carrega duas instruções na RAM. A primeira coloca 10 em `x1`; a segunda soma 5 ao valor de `x1` e grava 15 em `x2`.
+O [montador](src/montador.cpp) traduz as 37 instruções da tabela abaixo para palavras de 32 bits. Escreva uma instrução por linha, sem comentários. Ele aceita nomes de registradores como `x1` ou `ra` e resolve rótulos de branches e de `jal` quando declarados em uma linha própria, como `laco:`.
+
+Salve este programa como `programa.s` na raiz do repositório. Ele coloca 10 em `x1` e soma 5 para obter 15 em `x2`.
+
+```asm
+addi x1, x0, 10
+addi x2, x1, 5
+```
+
+Em C++, `montar_arquivo` devolve as palavras na ordem do programa. Carregue cada palavra na CPU com intervalo de quatro bytes e execute um passo para cada uma das duas instruções deste exemplo.
 
 ```cpp
 #include "cpu.h"
+#include "montador.h"
 #include <iostream>
 
 int main() {
     CPU cpu(256);                              // 256 bytes de RAM, PC inicial 0
-    cpu.carregar_instrucao(0, 0x00A00093u);    // addi x1, x0, 10
-    cpu.carregar_instrucao(4, 0x00508113u);    // addi x2, x1, 5
+    std::uint32_t endereco = 0;
+    for (auto palavra : montar_arquivo("programa.s")) {
+        cpu.carregar_instrucao(endereco, palavra);
+        endereco += 4;
+    }
 
     cpu.passo();
     cpu.passo();
@@ -68,6 +81,6 @@ A CPU exige alinhamento natural: meia-palavra em múltiplo de dois e palavra em 
 
 ## Escopo do projeto
 
-O núcleo atual recebe palavras de código de máquina e permite execução passo a passo. As próximas etapas previstas são o montador para entrada em Assembly, as caches de instruções e de dados, a interface gráfica e o empacotamento do ambiente de execução.
+O montador e a CPU já permitem executar programas em Assembly passo a passo pela interface C++. As próximas etapas previstas são as caches de instruções e de dados, a interface gráfica e o empacotamento do ambiente de execução.
 
 Referência técnica: [especificação oficial RV32I](https://docs.riscv.org/reference/isa/v20260120/unpriv/rv32.html). Distribuído sob a [licença MIT](LICENSE).
