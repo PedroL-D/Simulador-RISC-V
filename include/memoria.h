@@ -14,6 +14,9 @@ public:
     // 'explicit' evita conversao implicita de um numero para Memoria.
     explicit Memoria(std::size_t tamanho);
 
+    // Verifica se todos os bytes cabem na RAM e no espaco de enderecos RV32.
+    bool contem(std::uint32_t endereco, unsigned bytes) const;
+
     //funções de leitura
     std::uint32_t load_word(std::uint32_t endereco) const;
     std::uint32_t load_byte(std::uint32_t endereco) const; 

@@ -2,7 +2,7 @@
 Unidade de Controle
 
 Coordenar a execução da instrução
-Suporta OP, OP-IMM, LUI, AUIPC, branches, JAL e JALR
+Suporta loads, stores, OP, OP-IMM, LUI, AUIPC, branches, JAL e JALR
 
 - Decidir de onde vem o primeiro operando: rs1 ou PC
 - Determinar o segundo operando: registrador rs2 ou imediato
@@ -28,6 +28,7 @@ Definir os sinais e implementar à UC
 enum class OrigemA { RS1, ZERO, PC };
 enum class OrigemB { RS2, IMEDIATO };
 enum class OrigemResultado { ULA, MEMORIA, PC_MAIS_4 };
+enum class LarguraMemoria : unsigned { BYTE = 1, MEIA_PALAVRA = 2, PALAVRA = 4 };
 enum class ProximoPC { SEQUENCIAL, DESVIO_CONDICIONAL, JAL, JALR };
 
 // Sinais combinacionais: descrevem o que a CPU deve fazer nesta instrucao.
@@ -40,9 +41,12 @@ struct SinaisControle {
     bool escrever_memoria;      // Determina se deve escrever um dado na memória
     OrigemResultado origem_resultado;   // Qual resultado encaminhar para rd
     ProximoPC proximo_pc;       // Escolha do próximo PC
+    // Usados somente quando ha acesso a dados; a extensao afeta LB e LH.
+    LarguraMemoria largura = LarguraMemoria::PALAVRA;
+    bool estender_sinal = false;
 };
 
-// Suporta OP, OP-IMM, LUI, AUIPC, branches, JAL e JALR.
+// Suporta loads, stores, OP, OP-IMM, LUI, AUIPC, branches, JAL e JALR.
 // Nao executa a instrucao nem altera registradores, memoria ou PC.
 // Lanca std::invalid_argument se a codificacao for invalida ou nao suportada.
 SinaisControle gerar_controle(const Decoded& instrucao);

@@ -2,7 +2,7 @@
 Unidade de Controle
 
 Coordenar a execução da instrução
-Suporta as  19 instruçoes aritméticas e lógicas do controle_ula e as instruções de desvios e saltos (JAL, JALR, BRANCH) e LUI/AUIPC.
+Suporta as  19 instruçoes aritméticas e lógicas do controle_ula e as instruções de desvios e saltos (JAL, JALR, BRANCH) e LUI/AUIPC, alem de loads e stores.
 
 - Decidir de onde vem o primeiro operando: rs1 ou PC
 - Determinar o segundo operando: registrador rs2 ou imediato
@@ -50,6 +50,34 @@ SinaisControle gerar_controle(const Decoded& instrucao) {
             false,
             OrigemResultado::ULA,
             ProximoPC::SEQUENCIAL // AUIPC nao e um salto.
+        };
+    }
+
+    // LOAD (tipo I) e STORE (tipo S) usam ADD para calcular rs1 + imediato.
+    // funct3 escolhe a largura. Os bits superiores pertencem ao deslocamento.
+    if (instrucao.opcode == 0x03 || instrucao.opcode == 0x23) {
+        const bool load = instrucao.opcode == 0x03;
+        LarguraMemoria largura;
+        switch (instrucao.funct3) {
+            case 0: largura = LarguraMemoria::BYTE; break;         // LB / SB
+            case 1: largura = LarguraMemoria::MEIA_PALAVRA; break; // LH / SH
+            case 2: largura = LarguraMemoria::PALAVRA; break;      // LW / SW
+            case 4: // LBU
+            case 5: // LHU
+                if (!load) throw std::invalid_argument("funct3 invalido para store");
+                if (instrucao.funct3 == 4) {
+                    largura = LarguraMemoria::BYTE;         // LBU: 1 byte
+                } else {
+                    largura = LarguraMemoria::MEIA_PALAVRA; // LHU: 2 bytes
+                }
+                break;
+            default: throw std::invalid_argument("funct3 invalido para acesso a memoria");
+        }
+        return {
+            OperacaoULA::ADD, OrigemA::RS1, OrigemB::IMEDIATO,
+            load, load, !load, // Load escreve em rd e le a RAM; store escreve na RAM.
+            OrigemResultado::MEMORIA, ProximoPC::SEQUENCIAL,
+            largura, load && instrucao.funct3 < 2
         };
     }
 
