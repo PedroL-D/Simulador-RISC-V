@@ -6,19 +6,12 @@
 // construtor - banco de reg com inicialização propria no header
 CPU::CPU(std::size_t tamanho_memoria) : memoria(tamanho_memoria) {}
 
-// validar o endereco
-void CPU::validar_acesso(std::uint32_t endereco, unsigned bytes) const {
-    // neste simulador cada acesso deve estar alinhado ao seu tamanho
-    // o endereco eh divisivel pelo tamanho da palavra
-    // meia palabra precisa de edereco multiplo de 2
-    if (endereco % bytes != 0) throw std::invalid_argument("Endereco desalinhado");
-    if (!memoria.contem(endereco, bytes)) throw std::out_of_range("Acesso fora da RAM");
-}
-
 // carregar a instrucao na RAM
 // recebe o endereco e a palavra que representa a instrucao em cod de maq
 void CPU::carregar_instrucao(std::uint32_t endereco, std::uint32_t instrucao) {
     cache_instrucoes.escrever(memoria, endereco, 4, instrucao);
+    // Uma palavra recarregada também pode estar em uma linha de dados.
+    cache_dados.sincronizar_escrita(endereco, 4, instrucao);
 }
 
 // inicio da execucao de uma instrucao
@@ -61,22 +54,17 @@ void CPU::passo() {
 
     // 5. MEMORIA DE DADOS: LOAD le para rd; STORE grava os bits baixos de rs2.
     // Ex.: em SW x3, 8(x1), a ULA calcula x1 + 8 e o dado vem de x3.
-    std::uint32_t dado_lido = 0;    // guardará o calor devolvido pela memoria ate a etapa de escrita em registrador
-    if (sinais.ler_memoria) { // LOAD de dados continua consultando a RAM.
-        validar_acesso(resultado, static_cast<unsigned>(sinais.largura));
-        switch (sinais.largura) {
-            case LarguraMemoria::BYTE:
-                dado_lido = sinais.estender_sinal ? memoria.load_byte(resultado) : memoria.load_byte_unsigned(resultado);
-                break;
-            case LarguraMemoria::MEIA_PALAVRA:
-                dado_lido = sinais.estender_sinal ? memoria.load_half(resultado) : memoria.load_half_unsigned(resultado);
-                break;
-            case LarguraMemoria::PALAVRA: dado_lido = memoria.load_word(resultado); break;
-        }
-    } else if (sinais.escrever_memoria) { // STORE: SB, SH ou SW.
-        // Atualiza a RAM e, caso o bloco já esteja na cache de instruções,
-        // atualiza sua cópia para a próxima busca enxergar os bytes novos.
-        cache_instrucoes.escrever(memoria, resultado, static_cast<unsigned>(sinais.largura), rs2);
+    std::uint32_t dado_lido = 0;
+    const auto bytes = static_cast<unsigned>(sinais.largura);
+    if (sinais.ler_memoria) {
+        dado_lido = cache_dados.ler(memoria, resultado, bytes);
+        // LB e LH estendem o sinal depois da leitura. LBU e LHU já têm zeros nos bits altos.
+        if (sinais.estender_sinal && bytes < 4)
+            dado_lido = static_cast<std::uint32_t>(signExt(dado_lido, static_cast<int>(8 * bytes)));
+    } else if (sinais.escrever_memoria) {
+        cache_dados.escrever(memoria, resultado, bytes, rs2);
+        // O store já gravou na RAM. Atualize a cópia de código caso esteja residente.
+        cache_instrucoes.sincronizar_escrita(resultado, bytes, rs2);
     }
 
     // 6. ESCRITA E ATUALIZACAO DO PC: o controle seleciona o valor para rd.

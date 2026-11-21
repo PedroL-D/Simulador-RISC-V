@@ -26,6 +26,7 @@ Os comentarios das etapas em cpu.cpp acompanham o caminho dos valores desde a bu
 #ifndef CPU_H
 #define CPU_H
 
+#include "cache_dados.h"
 #include "cache_instrucoes.h"
 #include "registrador.h"
 
@@ -38,8 +39,7 @@ private:
 
     CacheInstrucoes cache_instrucoes;
 
-    // metodo auxiliar que recebe um endereco e uma quantidade de bytes
-    void validar_acesso(std::uint32_t endereco, unsigned bytes) const;
+    CacheDados cache_dados;
 
 public:
     explicit CPU(std::size_t tamanho_memoria);  // declaracao do construtor
@@ -52,6 +52,8 @@ public:
     void passo();   // acoes da CPU: busca-decodificacao-execucao-escrita
 
     ContadoresCache contadores_instrucoes() const { return cache_instrucoes.ler_contadores(); }
+
+    ContadoresCache contadores_dados() const { return cache_dados.ler_contadores(); }
 
     // devolve o endereco atual do PC
     std::uint32_t ler_pc() const { return pc; }
