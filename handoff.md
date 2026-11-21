@@ -1,6 +1,6 @@
 # Handoff do simulador RISC-V — 21/11/2026
 
-**Ponto de retomada.** A CPU executa uma instrução por chamada a `passo()`, e o montador já traduz arquivos Assembly em palavras de 32 bits. A próxima frente discutida pelo grupo é a cache. Ela pode ser desenvolvida e testada com os programas existentes enquanto o montador ganha testes próprios.
+**Ponto de retomada.** A CPU executa uma instrução por chamada a `passo()`, e o montador já traduz arquivos Assembly em palavras de 32 bits. A busca já usa a cache de instruções. A próxima frente é a cache de dados.
 
 A revisão local é a `main` no commit `d92832f`, que acrescentou o montador após a integração da CPU. No Mac usado pelo grupo, a cópia atual é o repositório dentro de **Sem Título/**. A pasta pai também contém fontes e um histórico Git mais antigo. Todos os caminhos e comandos abaixo partem da raiz da cópia atual.
 
@@ -67,21 +67,15 @@ sw t0, 48(zero)
 lw a0, 48(zero)
 ```
 
-## Próxima frente: caches de instruções e dados
+## Cache de instruções e próxima frente
 
-**Estado:** a CPU ainda acessa a RAM diretamente. O desenho discutido é uma **proposta**: duas instâncias de uma classe de cache de mapeamento direto, cada uma com seus próprios blocos e contadores. A configuração sugerida para a primeira demonstração é de 8 linhas de 16 bytes por cache.
+A busca em `CPU::passo()` consulta a [cache de instruções](src/cache_instrucoes.cpp) de mapeamento direto, com 8 linhas de 16 bytes. Stores e carga de programa escrevem na RAM e atualizam uma linha residente (write-through); uma escrita com miss preserva a linha (write-around). Os contadores medem somente buscas. O [teste de cache](tests/teste_cache_instrucoes.cpp) cobre 1 miss e 3 hits sequenciais, conflitos e alteração de código residente.
 
-| Onde conectar | Primeiro critério de aceitação |
-|---|---|
-| Busca de instrução em `CPU::passo()` | Com a cache inicialmente vazia, buscar nos endereços 0, 4, 8 e 12 deve produzir **1 miss e 3 hits**. A carga inicial do programa ocorre antes da contagem. |
-| Acesso a dados em loads/stores | Um `LW` consulta a cache de instruções na busca e a cache de dados na leitura. Preservar tamanho, ordem dos bytes e extensão de sinal da implementação atual. |
-| Escrita de dados | Política sugerida: *write-through* e *no-write-allocate*. Um store atualiza a RAM. Em hit, atualiza também os bytes da linha; em miss, mantém a linha anterior. |
-
-Antes de implementar, combinar como invalidar linhas ao recarregar um programa ou ao escrever em uma região já usada como código. Depois da integração, rodar o mesmo programa usado acima e conferir PC e registradores além dos contadores.
+A cache de dados continua pendente. Os loads de dados usam a RAM, onde LB/LH aplicam extensão de sinal. Ao inserir a segunda cache, preservar os bytes originais, separar os contadores das duas caches e manter coerentes as escritas em código.
 
 ## Pendências para a entrega
 
 1. Versionar um teste de integração do montador com a CPU e incluir casos de erro de Assembly.
-2. Implementar e testar as duas caches com a política que o grupo escolher.
+2. Implementar a cache de dados e testar a interação com a cache de instruções.
 3. Integrar a interface gráfica ao carregamento do programa, à execução por passo e às estatísticas de cache.
 4. Confirmar no enunciado qual entrega de ambiente é exigida (Docker, VirtualBox ou ambos) e testar o empacotamento a partir de uma cópia limpa.
