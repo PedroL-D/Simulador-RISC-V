@@ -43,8 +43,16 @@ A [CPU](src/cpu.cpp) guarda o PC, o [banco de 32 registradores](src/registrador.
 
 A CPU exige alinhamento natural: meia-palavra em múltiplo de dois e palavra em múltiplo de quatro. Instruções inválidas e endereços desalinhados geram `std::invalid_argument`. Acessos fora da RAM geram `std::out_of_range`.
 
+## Cache de instruções com 128 bytes
+
+Cada instrução RV32I ocupa 4 bytes. Escolhemos blocos de **16 bytes** para observar a **localidade espacial**. Com a cache vazia, a busca no endereço 0 traz os bytes de 0 a 15 da RAM. Nas buscas seguintes, os endereços 4, 8 e 12 já estão na mesma linha. São **1 miss e 3 hits**. Em um laço, voltar a uma instrução cujo bloco continua na cache também gera um hit, desta vez por **localidade temporal**.
+
+Escolhemos **8 linhas** para facilitar a visualização das substituições em programas pequenos. No mapeamento direto, os blocos que começam em 0 e 128 disputam a linha 0. Ao buscar nos endereços 0, 128 e novamente 0, cada bloco substitui o anterior, mesmo que outras linhas estejam livres. A capacidade de **8 × 16 = 128 bytes** atende a esse objetivo didático. Para avaliar desempenho, seria preciso comparar tamanhos executando os mesmos programas.
+
+Os contadores podem ser consultados com `cpu.contadores_instrucoes()`. O [teste de cache](tests/teste_cache_instrucoes.cpp) verifica a sequência de buscas e o conflito entre blocos. Para executá-lo, use o comando do teste da CPU com `tests/teste_cache_instrucoes.cpp` como arquivo de teste.
+
 ## Escopo do projeto
 
-O montador e a CPU já permitem executar programas em Assembly passo a passo pela interface C++. As próximas etapas previstas são as caches de instruções e de dados, a interface gráfica e o empacotamento do ambiente de execução.
+O montador e a CPU já permitem executar programas em Assembly passo a passo pela interface C++. As próximas etapas previstas são a cache de dados, a interface gráfica e o empacotamento do ambiente de execução.
 
 Referência técnica: [especificação oficial RV32I](https://docs.riscv.org/reference/isa/v20260120/unpriv/rv32.html). Distribuído sob a [licença MIT](LICENSE).
