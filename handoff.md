@@ -1,8 +1,8 @@
 # Handoff do simulador RISC-V — 21/11/2026
 
-**Ponto de retomada.** A CPU executa uma instrução por chamada a `passo()`, e o montador já traduz arquivos Assembly em palavras de 32 bits. A busca já usa a cache de instruções. A próxima frente é a cache de dados.
+**Ponto de retomada.** A CPU executa uma instrução por chamada a `passo()`, e o montador já traduz arquivos Assembly em palavras de 32 bits. A CPU busca código pela cache de instruções e executa loads e stores pela cache de dados.
 
-A revisão local é a `main` no commit `d92832f`, que acrescentou o montador após a integração da CPU. No Mac usado pelo grupo, a cópia atual é o repositório dentro de **Sem Título/**. A pasta pai também contém fontes e um histórico Git mais antigo. Todos os caminhos e comandos abaixo partem da raiz da cópia atual.
+No Mac do grupo, a cópia atual do repositório fica em **Sem Título/**. Para quem clonar do GitHub, os caminhos abaixo partem diretamente da raiz do clone.
 
 ## Histórico das alterações
 
@@ -17,6 +17,8 @@ A revisão local é a `main` no commit `d92832f`, que acrescentou o montador ap�
 | 20/11 | Branches e saltos | O controle passou a decidir quando tomar um desvio e a selecionar o destino de `JAL` e `JALR`. A validação de `JALR` passou a exigir `funct3 = 000`. | `eea51de`, `4fcc96d` |
 | 20/11 | Integração da CPU | `CPU::passo()` conectou busca, decodificação, ULA, acesso à RAM e escrita em registradores. Os testes passaram a executar pequenos programas em código de máquina. | `123295b` |
 | 21/11 | Montador | O grupo passou a escrever programas em Assembly com rótulos e a gerar as palavras que a CPU já sabia executar. | `d92832f` |
+| 21/11 | Cache de instruções | A busca pelo PC passou a consultar linhas de 16 bytes e a contar hits e misses. | `76ee6d9` |
+| 21/11 | Cache de dados e exemplos de integração | Loads e stores usam uma segunda cache. Dois programas Assembly exercitam o caminho do montador até a CPU. | Nesta entrega |
 
 ## O que está funcionando
 
@@ -27,55 +29,25 @@ A revisão local é a `main` no commit `d92832f`, que acrescentou o montador ap�
 | Memória | Instruções e dados compartilham a RAM little-endian. A CPU verifica limites e alinhamento natural antes do acesso. As leituras de byte e meia-palavra admitem extensão de sinal ou de zeros. [Memória](src/memoria.cpp) |
 | Montador | Reconhece os 37 mnemônicos, registradores x0–x31 e nomes ABI. Na primeira passagem registra os endereços dos rótulos; na segunda emite as instruções. Use uma instrução por linha, sem comentários, e rótulos em linhas próprias. [Interface](include/montador.h) · [Implementação](src/montador.cpp) |
 
-## Como ligar o montador à CPU
+## Integração da interface
 
-O [exemplo do README](README.md#do-assembly-à-execução) mostra os arquivos Assembly e C++, o comando de compilação e a saída esperada.
+1. **Abrir o arquivo.** Monte o `.s` com `montar_arquivo(caminho)`. Se houver erro, mostre a mensagem da exceção. O [arquivo de teste com rótulo ausente](tests/entradas/rotulo_ausente.s) deve indicar a linha 2 e o nome `destino`.
+2. **Iniciar a sessão.** Crie uma CPU para o novo programa, carregue as palavras nos endereços 0, 4, 8… com `carregar_instrucao()` e mantenha essa instância entre os cliques. Os dois exemplos usam 256 bytes de RAM. O [trecho de integração no README](README.md#do-assembly-à-execução) mostra a chamada.
+3. **Executar um passo.** Chame `passo()` uma vez e leia `ler_pc()`, `ler_registrador(indice)`, `contadores_instrucoes()` e `contadores_dados()` para atualizar a tela. O PC retornado indica a próxima instrução. Nos exemplos, pare ao atingir `4 * palavras.size()`. Um laço pode executar mais passos que o número de palavras carregadas.
+4. **Inspecionar memória e caches.** A API pública atual expõe PC, registradores e contadores. Para exibir bytes da RAM ou validade, tag e conteúdo de cada linha, falta uma consulta somente de leitura. Essa consulta deve preservar linhas e contadores a cada atualização da tela.
 
-`montar_arquivo(caminho)` devolve as palavras em ordem. A memória da CPU é privada, por isso o caminho público para executar um arquivo é carregar esse vetor na **mesma CPU** que receberá as chamadas a `passo()`:
+## Como conferir a entrega
 
-```cpp
-CPU cpu(256);
-const auto palavras = montar_arquivo("programa.s");
-std::uint32_t endereco = 0;
-for (auto palavra : palavras) {
-    cpu.carregar_instrucao(endereco, palavra);
-    endereco += 4;
-}
-```
+Rode os [comandos de compilação e teste](README.md#como-compilar-e-testar) na raiz. Os quatro executáveis passaram nesta revisão. O teste da CPU cobre memória, fluxo (inclusive AUIPC) e falhas de acesso. Os dois testes das caches cobrem conflitos, políticas de escrita e atualização de código. O [teste do montador com a CPU](tests/teste_montador_cpu.cpp) abre os mesmos arquivos que a interface pode carregar e verifica também um erro de montagem.
 
-O trecho usa os headers `cpu.h` e `montador.h`. A outra função do montador, `carregar_programa(caminho, mem, inicio)`, recebe uma instância de `Memoria`. Carregar em uma RAM separada não disponibiliza o programa à CPU. Com laços e saltos, a quantidade de instruções **executadas** pode diferir da quantidade de palavras **carregadas**.
+| Arquivo para abrir | Conferência na interface |
+|---|---|
+| [laco_memoria.s](exemplos/laco_memoria.s) | Após o 4º e o 7º passos, o PC volta a 4. Após o 10º, segue para 16. No 12º, o PC chega a 24 e `a0` recebe 6. |
+| [conflito_cache.s](exemplos/conflito_cache.s) | Após o 4º passo, `a0 = 0xFFFFFFFF` e `a1 = 255`. O 6º passo grava em 192 com miss. O 7º ainda lê 64 com hit. Os dois últimos loads dão miss por conflito. |
 
-## Verificação feita nesta revisão
-
-Execute os comandos na raiz com um compilador C++17. Mantenha os `assert` habilitados para o teste da CPU.
-
-```sh
-c++ -std=c++17 -Iinclude src/*.cpp tests/teste_cpu.cpp -o /tmp/teste_riscv_cpu
-/tmp/teste_riscv_cpu
-```
-
-- **CPU:** o teste versionado passou para memória, fluxo de controle e falhas. [Casos executados](tests/teste_cpu.cpp)
-- **AUIPC:** o teste local passou nas 123 verificações. O arquivo `tests/teste_auipc.cpp` está presente nesta máquina, mas ainda não foi versionado. Para reproduzir localmente, use o comando acima trocando o fonte de teste e o nome do executável.
-- **Assembly → CPU:** em um teste temporário, o montador gerou cinco palavras para o programa abaixo. Após sete chamadas a `passo()`, a CPU chegou a `PC = 20` com `a0 = 0`. O laço executa duas vezes. Este ensaio de integração ainda não faz parte da suíte versionada.
-
-```asm
-addi t0, zero, 2
-laco:
-addi t0, t0, -1
-bne t0, zero, laco
-sw t0, 48(zero)
-lw a0, 48(zero)
-```
-
-## Cache de instruções e próxima frente
-
-A busca em `CPU::passo()` consulta a [cache de instruções](src/cache_instrucoes.cpp) de mapeamento direto, com 8 linhas de 16 bytes. Stores e carga de programa escrevem na RAM e atualizam uma linha residente (write-through); uma escrita com miss preserva a linha (write-around). Os contadores medem somente buscas. O [teste de cache](tests/teste_cache_instrucoes.cpp) cobre 1 miss e 3 hits sequenciais, conflitos e alteração de código residente.
-
-A cache de dados continua pendente. Os loads de dados usam a RAM, onde LB/LH aplicam extensão de sinal. Ao inserir a segunda cache, preservar os bytes originais, separar os contadores das duas caches e manter coerentes as escritas em código.
+Os valores finais das duas caches estão na [tabela dos exemplos](README.md#exemplos-para-executar-por-passos).
 
 ## Pendências para a entrega
 
-1. Versionar um teste de integração do montador com a CPU e incluir casos de erro de Assembly.
-2. Implementar a cache de dados e testar a interação com a cache de instruções.
-3. Integrar a interface gráfica ao carregamento do programa, à execução por passo e às estatísticas de cache.
-4. Confirmar no enunciado qual entrega de ambiente é exigida (Docker, VirtualBox ou ambos) e testar o empacotamento a partir de uma cópia limpa.
+1. Integrar e conferir o carregamento dos exemplos, o botão de passo e a exibição de estado na interface gráfica.
+2. Confirmar no enunciado o ambiente de entrega exigido (Docker, VirtualBox ou ambos) e testar o empacotamento a partir de uma cópia limpa.
