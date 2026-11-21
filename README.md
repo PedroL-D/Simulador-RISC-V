@@ -143,7 +143,7 @@ O montador e a CPU já permitem executar programas em Assembly passo a passo pel
 
 ### Modelo de estudo
 
-O diagrama do núcleo **RV32I46F_5SP**, do projeto BASIC_RV32s, mostra um pipeline de cinco estágios. Para comparar com a CPU monociclo do grupo, acompanhe o caminho do PC até a memória de instruções e, em seguida, do decodificador até o banco de registradores e a ULA. [Abrir diagrama](modelo-de-estudo/rv32i46f-pipeline.webp) · [Projeto de origem](https://github.com/RISC-KC/basic_rv32s).
+O diagrama do núcleo **RV32I46F_5SP**, do projeto BASIC_RV32s, mostra um pipeline de cinco estágios. Para comparar com a CPU monociclo do grupo, acompanhe o caminho do PC até a memória de instruções e, em seguida, do decodificador até o banco de registradores e a ULA. [Abrir diagrama](modelo-de-estudo/rv32i46f-pipeline.webp)
 
 ## Licença
 
