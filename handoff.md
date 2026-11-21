@@ -31,7 +31,7 @@ No Mac do grupo, a cópia atual do repositório fica em **Sem Título/**. Para q
 
 ## Integração da interface
 
-1. **Abrir o arquivo.** Monte o `.s` com `montar_arquivo(caminho)`. Se houver erro, mostre a mensagem da exceção. O [arquivo de teste com rótulo ausente](tests/entradas/rotulo_ausente.s) deve indicar a linha 2 e o nome `destino`.
+1. **Abrir o arquivo.** Monte o arquivo de texto com as instruções em Assembly com `montar_arquivo(caminho)`. Se houver erro, mostre a mensagem da exceção. O [arquivo de teste com rótulo ausente](tests/entradas/rotulo_ausente.txt) deve indicar a linha 2 e o nome `destino`.
 2. **Iniciar a sessão.** Crie uma CPU para o novo programa, carregue as palavras nos endereços 0, 4, 8… com `carregar_instrucao()` e mantenha essa instância entre os cliques. Os dois exemplos usam 256 bytes de RAM. O [trecho de integração no README](README.md#do-assembly-à-execução) mostra a chamada.
 3. **Executar um passo.** Chame `passo()` uma vez e leia `ler_pc()`, `ler_registrador(indice)`, `contadores_instrucoes()` e `contadores_dados()` para atualizar a tela. O PC retornado indica a próxima instrução. Nos exemplos, pare ao atingir `4 * palavras.size()`. Um laço pode executar mais passos que o número de palavras carregadas.
 4. **Inspecionar memória e caches.** A API pública atual expõe PC, registradores e contadores. Para exibir bytes da RAM ou validade, tag e conteúdo de cada linha, falta uma consulta somente de leitura. Essa consulta deve preservar linhas e contadores a cada atualização da tela.
@@ -42,8 +42,8 @@ Rode os [comandos de compilação e teste](README.md#como-compilar-e-testar) na 
 
 | Arquivo para abrir | Conferência na interface |
 |---|---|
-| [laco_memoria.s](exemplos/laco_memoria.s) | Após o 4º e o 7º passos, o PC volta a 4. Após o 10º, segue para 16. No 12º, o PC chega a 24 e `a0` recebe 6. |
-| [conflito_cache.s](exemplos/conflito_cache.s) | Após o 4º passo, `a0 = 0xFFFFFFFF` e `a1 = 255`. O 6º passo grava em 192 com miss. O 7º ainda lê 64 com hit. Os dois últimos loads dão miss por conflito. |
+| [laco_memoria.txt](exemplos/laco_memoria.txt) | Após o 4º e o 7º passos, o PC volta a 4. Após o 10º, segue para 16. No 12º, o PC chega a 24 e `a0` recebe 6. |
+| [conflito_cache.txt](exemplos/conflito_cache.txt) | Após o 4º passo, `a0 = 0xFFFFFFFF` e `a1 = 255`. O 6º passo grava em 192 com miss. O 7º ainda lê 64 com hit. Os dois últimos loads dão miss por conflito. |
 
 Os valores finais das duas caches estão na [tabela dos exemplos](README.md#exemplos-para-executar-por-passos).
 

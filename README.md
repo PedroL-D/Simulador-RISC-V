@@ -22,14 +22,14 @@ Para repetir apenas a montagem e execução dos dois exemplos, rode `./build/tes
 
 ## Do Assembly à execução
 
-O [montador](src/montador.cpp) lê o arquivo `.s` em duas passagens. Na primeira, atribui um endereço a cada rótulo, contando quatro bytes por instrução. Na segunda, codifica cada instrução em uma palavra de 32 bits. Para um branch ou `jal` com rótulo, o deslocamento em bytes é o endereço do rótulo menos o PC da própria instrução.
+Os exemplos usam arquivos de texto `.txt` com uma instrução em Assembly por linha. O [montador](src/montador.cpp) lê o conteúdo em duas passagens, independentemente da extensão do arquivo. Na primeira, atribui um endereço a cada rótulo, contando quatro bytes por instrução. Na segunda, codifica cada instrução em uma palavra de 32 bits. Para um branch ou `jal` com rótulo, o deslocamento em bytes é o endereço do rótulo menos o PC da própria instrução.
 
 Escreva os mnemônicos em minúsculas, uma instrução por linha, sem comentários. Use registradores numéricos (`x0` a `x31`) ou nomes ABI como `zero`, `t0` e `a0`. O montador aceita imediatos decimais e hexadecimais (`0x`), ignora linhas em branco e reconhece rótulos em linhas próprias, como `laco:`. Para loads e stores, use `lw a0, 48(zero)` e `sw t1, 48(zero)`. Para o salto por registrador, a sintaxe aceita é `jalr rd, rs1, imm`.
 
 Para abrir um programa na interface, use `montar_arquivo()` e carregue o vetor na CPU que receberá as chamadas a `passo()`. Este trecho usa as declarações de [montador.h](include/montador.h) e [cpu.h](include/cpu.h).
 
 ```cpp
-const auto palavras = montar_arquivo("exemplos/laco_memoria.s");
+const auto palavras = montar_arquivo("exemplos/laco_memoria.txt");
 CPU cpu(256);
 std::uint32_t endereco = 0;
 for (auto palavra : palavras) {
@@ -47,8 +47,8 @@ Comece cada programa com uma nova `CPU(256)`, PC em zero e caches vazias. Encerr
 
 | Programa | O que observar | Estado ao terminar | Cache de instruções | Cache de dados |
 |---|---|---|---|---|
-| [Laço e memória](exemplos/laco_memoria.s) | Soma 3 + 2 + 1 em `t1`. O `bne` no endereço 12 volta ao endereço 4 duas vezes. O `sw` grava a soma em 48 e o `lw` a lê em `a0`. | 12 passos, PC = 24, `t0 = 0`, `t1 = a0 = 6` | 10 hits, 2 misses | 0 hits, 2 misses |
-| [Conflito na cache](exemplos/conflito_cache.s) | Lê o mesmo byte com `lb` e `lbu`. Os endereços 64 e 192 disputam a linha 4. O store em 192 preserva o bloco de 64 e o load em 192 o substitui. | 9 passos, PC = 36, `a0 = a3 = 0xFFFFFFFF`, `a1 = 255`, `a2 = a4 = 65535` | 6 hits, 3 misses | 3 hits, 5 misses |
+| [Laço e memória](exemplos/laco_memoria.txt) | Soma 3 + 2 + 1 em `t1`. O `bne` no endereço 12 volta ao endereço 4 duas vezes. O `sw` grava a soma em 48 e o `lw` a lê em `a0`. | 12 passos, PC = 24, `t0 = 0`, `t1 = a0 = 6` | 10 hits, 2 misses | 0 hits, 2 misses |
+| [Conflito na cache](exemplos/conflito_cache.txt) | Lê o mesmo byte com `lb` e `lbu`. Os endereços 64 e 192 disputam a linha 4. O store em 192 preserva o bloco de 64 e o load em 192 o substitui. | 9 passos, PC = 36, `a0 = a3 = 0xFFFFFFFF`, `a1 = 255`, `a2 = a4 = 65535` | 6 hits, 3 misses | 3 hits, 5 misses |
 
 O [teste de integração](tests/teste_montador_cpu.cpp) monta esses mesmos arquivos e confere os resultados. No exemplo do laço, o primeiro acesso de dados é um store com miss. Como ele escreve diretamente na RAM, o load seguinte também dá miss e traz o bloco para a cache.
 

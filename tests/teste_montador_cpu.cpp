@@ -18,7 +18,7 @@ static void carregar(CPU& cpu, const std::string& caminho, std::size_t quantidad
 
 static void testar_laco() {
     CPU cpu(256);
-    carregar(cpu, "exemplos/laco_memoria.s", 6);
+    carregar(cpu, "exemplos/laco_memoria.txt", 6);
     // O branch volta ao endereço 4 duas vezes. Na terceira passagem, segue para o store.
     for (unsigned proximo_pc : {4u, 8u, 12u, 4u, 8u, 12u, 4u, 8u, 12u, 16u, 20u, 24u}) {
         cpu.passo();
@@ -32,7 +32,7 @@ static void testar_laco() {
 
 static void testar_conflito() {
     CPU cpu(256);
-    carregar(cpu, "exemplos/conflito_cache.s", 9);
+    carregar(cpu, "exemplos/conflito_cache.txt", 9);
     // Variação esperada na cache de dados a cada instrução, começando pelo ADDI.
     const unsigned hits_acumulados[]   = {0, 0, 0, 1, 2, 2, 3, 3, 3};
     const unsigned misses_acumulados[] = {0, 1, 2, 2, 2, 3, 3, 4, 5};
@@ -50,7 +50,7 @@ static void testar_conflito() {
 
 static void testar_erro_de_montagem() {
     try {
-        montar_arquivo("tests/entradas/rotulo_ausente.s");
+        montar_arquivo("tests/entradas/rotulo_ausente.txt");
     } catch (const std::runtime_error& erro) {
         const std::string mensagem = erro.what();
         assert(mensagem.find("linha 2:") != std::string::npos);
