@@ -98,15 +98,22 @@ void texto_hit_miss(bool hit) {
 } // namespace
 
 int main() {
-    // 1. GLFW + contexto OpenGL 3.0 (compativel com Mesa/Docker)
+    // 1. GLFW + contexto OpenGL da plataforma
     if (!glfwInit()) {
         std::fprintf(stderr, "Erro ao inicializar GLFW\n");
         return 1;
     }
 
-    const char* glsl_version = "#version 130";
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+#ifdef __APPLE__
+    const char* glsl_version = "#version 150";
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 2);
+    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+    glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GLFW_TRUE);
+#else
+    const char* glsl_version = "#version 130";
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
+#endif
 
     GLFWwindow* window = glfwCreateWindow(1280, 720, "Simulador RISC-V (RV32I)", nullptr, nullptr);
     if (!window) {
