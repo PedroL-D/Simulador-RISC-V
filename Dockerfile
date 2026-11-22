@@ -17,7 +17,7 @@ COPY imgui imgui
 COPY exemplos exemplos
 
 RUN g++ -std=c++17 -O2 -Iinclude -Iimgui -Iimgui/backends \
-        src/*.cpp gui/teste_interface_grafica.cpp \
+        src/*.cpp gui/*.cpp \
         imgui/imgui.cpp imgui/imgui_draw.cpp imgui/imgui_tables.cpp imgui/imgui_widgets.cpp \
         imgui/backends/imgui_impl_glfw.cpp imgui/backends/imgui_impl_opengl3.cpp \
         -lglfw -lGL -o simulador_gui
