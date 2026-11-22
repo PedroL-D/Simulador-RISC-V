@@ -29,7 +29,17 @@ Os comentarios das etapas em cpu.cpp acompanham o caminho dos valores desde a bu
 #include "cache_dados.h"
 #include "cache_instrucoes.h"
 #include "registrador.h"
+#include "controle.h"
 
+
+// Valores de um passo concluído. Os operandos são os usados antes da escrita em rd.
+struct PassoCPU {
+    std::uint32_t pc, pc_depois, palavra;
+    Decoded campos;
+    SinaisControle sinais;
+    std::uint32_t imediato, operando_a, operando_b, resultado_ula, valor_rs2, valor_rd;
+    bool tomou_desvio;
+};
 
 class CPU {
 private:
@@ -50,6 +60,9 @@ public:
     // Acesso fora da RAM: out_of_range. A falha preserva PC, registradores e RAM; uma busca concluida conta na cache.
 
     void passo();   // acoes da CPU: busca-decodificacao-execucao-escrita
+
+    // Executa a mesma instrução e devolve os valores que percorreram o datapath.
+    PassoCPU passo_com_detalhes();
 
     ContadoresCache contadores_instrucoes() const { return cache_instrucoes.ler_contadores(); }
 

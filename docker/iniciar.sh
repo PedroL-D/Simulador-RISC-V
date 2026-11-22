@@ -6,8 +6,8 @@ set -e
 export DISPLAY=:99
 export LIBGL_ALWAYS_SOFTWARE=1   # renderizacao por software (o container nao tem GPU)
 
-# Tela virtual com o mesmo tamanho da janela do simulador (1280x720)
-Xvfb :99 -screen 0 1280x720x24 2>/dev/null &
+# Tela virtual com o mesmo tamanho da janela do simulador (1280x914)
+Xvfb :99 -screen 0 1280x914x24 2>/dev/null &
 
 # Espera o display ficar pronto
 for _ in $(seq 1 50); do
