@@ -86,6 +86,8 @@ A função `carregar_programa(caminho, memoria, inicio)` grava as palavras na in
 
 ## Instruções implementadas
 
+Para consultar uma operação específica, a tabela em português traz um exemplo de Assembly e o efeito de cada instrução nos registradores, na memória ou no PC. [Consultar as 37 instruções](docs/instrucoes.md) · [Consultar os nomes ABI dos registradores](docs/guia-de-estudo.md#nomes-e-usos-dos-registradores)
+
 | Grupo | Instruções |
 |---|---|
 | Operações entre registradores | ADD, SUB, AND, OR, XOR, SLL, SRL, SRA, SLT, SLTU |
@@ -108,6 +110,14 @@ A [CPU](src/cpu.cpp) guarda o PC, o [banco de 32 registradores](src/registrador.
 
 A CPU exige alinhamento natural: meia-palavra em múltiplo de dois e palavra em múltiplo de quatro. Instruções inválidas e endereços desalinhados geram `std::invalid_argument`. Acessos fora da RAM geram `std::out_of_range`.
 
+## Memória principal
+
+A RAM da interface tem 4.096 endereços de um byte, de 0 a 4095. A figura agrupa os bytes em blocos de 16 para permitir a comparação com as linhas das caches. Ela mostra o estado após o 7º passo de [conflito_cache.txt](exemplos/conflito_cache.txt), o mesmo instante da [figura das caches](#cache-de-dados).
+
+![RAM após o sétimo passo. O bloco 1 contém a instrução no endereço 24. Os primeiros quatro bytes do bloco 4, em 64, são FF FF 00 00. Os do bloco 12, em 192, são FF FF FF FF.](docs/imagens/memoria-principal.png)
+
+**Para comparar as figuras**, localize os blocos 4 e 12 na RAM. Ambos existem ali ao mesmo tempo, cada um em sua faixa de endereços. Na cache D, os dois disputam a linha 4. No 7º passo, a CPU encontra o bloco 4 nessa linha e lê a palavra em 64 com *hit*. No 8º, pede a palavra em 192: o *miss* traz uma cópia do bloco 12 para a linha 4. Os bytes de ambos os blocos continuam na RAM.
+
 ## Cache de instruções com 128 bytes
 
 Cada instrução RV32I ocupa 4 bytes. Escolhemos blocos de **16 bytes** para observar a **localidade espacial**. Com a cache vazia, a busca no endereço 0 traz os bytes de 0 a 15 da RAM. Nas buscas seguintes, os endereços 4, 8 e 12 já estão na mesma linha. São **1 miss e 3 hits**. Em um laço, voltar a uma instrução cujo bloco continua na cache também gera um hit, desta vez por **localidade temporal**.
@@ -123,6 +133,10 @@ A CPU usa uma segunda cache de mapeamento direto para os loads e stores. Ela tam
 - **Load com miss.** A cache traz o bloco da RAM. Um segundo load no mesmo bloco pode dar hit. Os bytes ficam na linha como estão na RAM. Por exemplo, ao ler o mesmo byte `0xFF`, `LB` entrega `0xFFFFFFFF` ao registrador e `LBU` entrega `0x000000FF`.
 - **Store com hit.** A CPU atualiza os bytes correspondentes na linha e na RAM no mesmo passo (*write-through* sem buffer).
 - **Store com miss.** A CPU escreve na RAM e preserva a linha de dados (*write-around*). Se o endereço também estiver na cache de instruções, a cópia de código recebe os bytes novos.
+
+![Caches no 7º passo. A busca lê os bytes +8 a +11 do bloco 1 na cache I. Na cache D, a linha 4 está válida, tem tag 0 e contém o bloco 4. O load lê FF FF 00 00 nas posições +0 a +3.](docs/imagens/mapeamento-caches.png)
+
+No 7º passo de [conflito_cache.txt](exemplos/conflito_cache.txt), a busca em PC 24 usa a linha 1 da cache I e a leitura em 64 usa a linha 4 da cache D. **Bloco RAM** identifica o bloco copiado, **V** indica se a linha é válida e as colunas **+0 a +15** mostram os bytes em hexadecimal. O load começa na posição +0 do bloco 4 e lê os quatro bytes destacados. No passo seguinte, a leitura em 192 traz o bloco 12 para a mesma linha e troca sua tag de 0 para 1.
 
 Use `cpu.contadores_dados()` para consultar os hits e misses de dados. Cada load ou store válido conta uma vez. A carga inicial do programa e a sincronização entre caches preservam os contadores. O [teste da cache de dados](tests/teste_cache_dados.cpp) exercita essas políticas e a interação com a CPU.
 
@@ -196,6 +210,8 @@ Os cabeçalhos em `include/` apresentam a interface de cada componente. A tabela
 - **Sarah L. Harris e David Money Harris.** *Digital Design and Computer Architecture, RISC-V Edition*, apêndice B. A figura B.1 mostra a posição dos campos em cada formato. A tabela B.1 permite conferir os valores de `opcode`, `funct3` e `funct7` usados no decodificador e no montador. [RISC-V Instruction Set Summary (PDF)](https://pages.hmc.edu/harris/ddca/ddcarv/DDCArv_AppB_Harris.pdf).
 - **Edson Borin.** *An Introduction to Assembly Programming with RISC-V*. Material para estudar a escrita de programas em Assembly e o uso dos registradores. [Página do livro na Unicamp](https://www.ic.unicamp.br/~edson/riscv-book.html).
 - **William Stallings.** *Arquitetura e organização de computadores*. Referência para o estudo de localidade, mapeamento direto e políticas de escrita em cache. [Catálogo da Pearson](https://www.bvirtual.com.br/NossoAcervo/Publicacao/151479).
+- **Carlos Delfino (RISCuinho).** Tabela em português com os nomes ABI e as funções convencionais dos registradores inteiros. Ajuda a interpretar nomes como `ra`, `t0` e `a0` na interface. [Registradores Risc-V](https://riscuinho.github.io/posts/registradores_no_risc-v/).
+- **RISC-V Azedinha.** Documentação de um SoC educacional em VHDL. A visão geral apresenta o modelo de acesso a dados por loads e stores e a relação entre ISA e microarquitetura. [Visão Geral do Projeto](https://risc-v-azedinha.github.io/RISC-V/).
 - **Microarquitetura MIC-1.** Os materiais de estudo `MIC1 - microarquitetura.pdf` e `MIC1 - microprograma.pdf` permitem comparar a execução monociclo deste simulador com a sequência de microinstruções usada pela MIC-1 para buscar, identificar e executar uma instrução.
 
 ### Modelo de estudo
