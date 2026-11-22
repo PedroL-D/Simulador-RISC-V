@@ -1,6 +1,12 @@
 # Simulador RISC-V
 
-Projeto de Arquitetura de Computadores escrito em C++17. O simulador executa 37 instruções da base inteira de 32 bits do RISC-V (RV32I). Cada chamada a `CPU::passo()` executa uma instrução completa e permite observar a mudança no contador de programa (PC) e nos registradores.
+Simulador didático de Arquitetura de Computadores escrito em C++17. O montador traduz um programa em Assembly e a CPU monociclo executa 37 instruções do RV32I. A cada passo, a interface mostra o caminho dos dados, o próximo PC, o registrador escrito e os acessos às caches de instruções e de dados.
+
+[Abrir no navegador com Docker](#abrir-o-simulador-no-navegador) · [Rodar no macOS](#compilar-e-rodar-no-macos) · [Guia de estudo e apresentação](docs/guia-de-estudo.md) · [Histórico do projeto](handoff.md)
+
+![Simulador ao final do laço, com o registrador a0 em verde, as estatísticas das duas caches e o caminho da leitura destacado no datapath.](docs/imagens/simulador-laco.png)
+
+*Último passo do exemplo do laço. A instrução `lw a0, 48(zero)` é encontrada na cache de instruções (HIT). A cache de dados busca o bloco na RAM (MISS), `a0` recebe 6 e o PC avança de 20 para 24.*
 
 ## Abrir o simulador no navegador
 
@@ -13,18 +19,7 @@ docker run -d --rm --name simulador-riscv -p 127.0.0.1:6080:6080 simulador-riscv
 
 Abra a [interface local no navegador](http://localhost:6080/vnc.html?autoconnect=true&resize=scale). O navegador mostra a janela do simulador por noVNC. A aplicação roda dentro do container com renderização por software. A porta fica restrita ao computador local porque a sessão VNC dispensa senha.
 
-1. Ao iniciar, a janela **Controle da CPU** carrega `exemplos/laco_memoria.txt`. Clique em **Passo**. O PC deve ir de 0 para 4, `t0` deve receber 3 e a primeira busca deve aparecer como **MISS**.
-2. Use **Executar** para continuar, **Pausar** para interromper e **Passos/s** para ajustar a velocidade de 1 a 120 instruções por segundo. **Reset** recria a CPU e recarrega o programa desde o endereço zero.
-3. Para observar um conflito de cache, digite `exemplos/conflito_cache.txt` e clique em **Carregar**. O campo aceita um caminho dentro do container. Para experimentar um programa próprio, copie o arquivo com `docker cp meu_programa.txt simulador-riscv:/app/meu_programa.txt` e carregue `meu_programa.txt`.
-
-| Janela | O que observar |
-|---|---|
-| Controle da CPU | PC atual, caminho do arquivo, controles de execução e mensagens de término ou erro. |
-| Programa | Endereço, palavra de máquina e Assembly do programa carregado. A seta indica a próxima instrução. |
-| Banco de Registradores | Os 32 registradores com nome ABI, valor hexadecimal e decimal com sinal. O último destino de escrita aparece em verde. |
-| Ultimo passo | Instrução, campos decodificados, imediato, sinais de controle, registrador de destino e PC antes e depois do passo. |
-| Caches | Hits, misses, taxa de acerto e resultado do último passo para instruções e dados. |
-| Microarquitetura (Datapath) | Caminho simplificado entre PC, cache de instruções, ULA e cache de dados. As cores indicam os acessos do último passo. |
+Para carregar um programa próprio pelo navegador, copie o arquivo para o container com `docker cp meu_programa.txt simulador-riscv:/app/meu_programa.txt`. Na interface, digite `meu_programa.txt` no campo de caminho e clique em **Carregar**.
 
 Para encerrar, execute `docker stop simulador-riscv`. A opção `--rm` remove o container ao parar. A imagem pode ser usada de novo com o mesmo `docker run`.
 
@@ -40,25 +35,33 @@ mkdir -p build && c++ -std=c++17 -O2 -DGL_SILENCE_DEPRECATION -Iinclude -Iimgui 
   -o build/simulador_gui
 ```
 
-Execute `./build/simulador_gui` a partir dessa mesma pasta para que a interface encontre `exemplos/laco_memoria.txt`. Nas próximas vezes, basta repetir esse comando. Recompile quando alterar o código C++.
+Execute `./build/simulador_gui` a partir dessa mesma pasta para que a interface encontre `exemplos/laco_memoria.txt`. Depois da primeira compilação, também é possível abrir a janela com dois cliques em [Abrir Simulador (macOS).command](Abrir%20Simulador%20%28macOS%29.command). Recompile quando alterar o código C++.
 
-## Como compilar e testar
+## Primeiro passo na interface
 
-A partir da raiz do repositório, use um compilador C++17 e um shell como Bash ou Zsh. Cada teste tem seu próprio `main()`. O comando compila e executa os quatro separadamente e para na primeira falha. Mantenha os `assert` habilitados.
+1. Ao iniciar, a janela **Controle da CPU** carrega `exemplos/laco_memoria.txt`. Clique em **Passo**. O PC deve ir de 0 para 4, `t0` deve receber 3 e a primeira busca deve aparecer como **MISS**.
+2. Use **Executar** para continuar, **Pausar** para interromper e **Passos/s** para ajustar a velocidade de 1 a 120 instruções por segundo. **Reset** recria a CPU e recarrega o programa desde o endereço zero.
+3. Para observar um conflito de cache, digite `exemplos/conflito_cache.txt` e clique em **Carregar**.
 
-```sh
-(
-  set -e
-  mkdir -p build/tests
-  for fonte in tests/teste_*.cpp; do
-    nome=$(basename "$fonte" .cpp)
-    c++ -std=c++17 -Iinclude src/*.cpp "$fonte" -o "build/tests/$nome"
-    "build/tests/$nome"
-  done
-)
-```
+| Janela | O que observar |
+|---|---|
+| Controle da CPU | PC atual, caminho do arquivo, controles de execução e mensagens de término ou erro. |
+| Programa | Endereço, palavra de máquina e Assembly do programa carregado. A seta indica a próxima instrução. |
+| Banco de Registradores | O layout inicial de 1280 × 914 acomoda os 32 registradores e o datapath inteiro. Em telas mais baixas, o banco permite rolagem. Cada linha mostra o nome ABI e os valores hexadecimal e decimal com sinal. O último destino de escrita aparece em verde. |
+| Ultimo passo | Instrução, campos decodificados, imediato, sinais de controle, registrador de destino e PC antes e depois do passo. |
+| Caches | Hits, misses, taxa de acerto e resultado do último passo para instruções e dados. |
+| Microarquitetura (Datapath) | Mostra o caminho do último passo pelo PC, pelas caches, pela decodificação e controle, pelos registradores, pela ULA e pela RAM. As setas destacadas mostram os operandos, o endereço de memória, o dado do store ou o retorno para o registrador. O bloco **Proximo PC** indica a decisão de desvio e o próximo endereço. |
 
-Para repetir apenas a montagem e execução dos dois exemplos, rode `./build/tests/teste_montador_cpu` na raiz depois de compilar. Os outros três testes verificam a CPU e as duas caches com programas em código de máquina.
+## Exemplos para executar por passos
+
+A interface usa 4096 bytes de RAM. Os testes destes exemplos usam 256 bytes e produzem os mesmos resultados. Carregar o programa ou clicar em **Reset** inicia a CPU com PC em zero e caches vazias. Cada clique em **Passo** executa uma instrução. A interface indica o fim quando o PC sai da área do código carregado.
+
+| Programa | O que observar | Estado ao terminar | Cache de instruções | Cache de dados |
+|---|---|---|---|---|
+| [Laço e memória](exemplos/laco_memoria.txt) | Soma 3 + 2 + 1 em `t1`. O `bne` no endereço 12 volta ao endereço 4 duas vezes. O `sw` grava a soma em 48 e o `lw` a lê em `a0`. | 12 passos, PC = 24, `t0 = 0`, `t1 = a0 = 6` | 10 hits, 2 misses | 0 hits, 2 misses |
+| [Conflito na cache](exemplos/conflito_cache.txt) | Lê o mesmo byte com `lb` e `lbu`. Os endereços 64 e 192 disputam a linha 4. O store em 192 preserva o bloco de 64 e o load em 192 o substitui. | 9 passos, PC = 36, `a0 = a3 = 0xFFFFFFFF`, `a1 = 255`, `a2 = a4 = 65535` | 6 hits, 3 misses | 3 hits, 5 misses |
+
+O [teste de integração](tests/teste_montador_cpu.cpp) monta esses mesmos arquivos e confere os resultados. No exemplo do laço, o primeiro acesso de dados é um store com miss. Como ele escreve diretamente na RAM, o load seguinte também dá miss e traz o bloco para a cache.
 
 ## Do Assembly à execução
 
@@ -80,17 +83,6 @@ cpu.passo();  // Primeiro passo do laço: t0 recebe 3 e o PC avança para 4.
 ```
 
 A função `carregar_programa(caminho, memoria, inicio)` grava as palavras na instância de `Memoria` passada pelo chamador. A CPU tem sua própria RAM. Um rótulo desconhecido ou um registrador inválido durante a montagem gera `std::runtime_error` com o número da linha para exibição na interface.
-
-### Exemplos para executar por passos
-
-A interface usa 4096 bytes de RAM. Os testes destes exemplos usam 256 bytes e produzem os mesmos resultados. Carregar o programa ou clicar em **Reset** inicia a CPU com PC em zero e caches vazias. Cada clique em **Passo** executa uma instrução. A interface indica o fim quando o PC sai da área do código carregado.
-
-| Programa | O que observar | Estado ao terminar | Cache de instruções | Cache de dados |
-|---|---|---|---|---|
-| [Laço e memória](exemplos/laco_memoria.txt) | Soma 3 + 2 + 1 em `t1`. O `bne` no endereço 12 volta ao endereço 4 duas vezes. O `sw` grava a soma em 48 e o `lw` a lê em `a0`. | 12 passos, PC = 24, `t0 = 0`, `t1 = a0 = 6` | 10 hits, 2 misses | 0 hits, 2 misses |
-| [Conflito na cache](exemplos/conflito_cache.txt) | Lê o mesmo byte com `lb` e `lbu`. Os endereços 64 e 192 disputam a linha 4. O store em 192 preserva o bloco de 64 e o load em 192 o substitui. | 9 passos, PC = 36, `a0 = a3 = 0xFFFFFFFF`, `a1 = 255`, `a2 = a4 = 65535` | 6 hits, 3 misses | 3 hits, 5 misses |
-
-O [teste de integração](tests/teste_montador_cpu.cpp) monta esses mesmos arquivos e confere os resultados. No exemplo do laço, o primeiro acesso de dados é um store com miss. Como ele escreve diretamente na RAM, o load seguinte também dá miss e traz o bloco para a cache.
 
 ## Instruções implementadas
 
@@ -134,9 +126,30 @@ A CPU usa uma segunda cache de mapeamento direto para os loads e stores. Ela tam
 
 Use `cpu.contadores_dados()` para consultar os hits e misses de dados. Cada load ou store válido conta uma vez. A carga inicial do programa e a sincronização entre caches preservam os contadores. O [teste da cache de dados](tests/teste_cache_dados.cpp) exercita essas políticas e a interação com a CPU.
 
+## Como compilar e testar
+
+A partir da raiz do repositório, use um compilador C++17 e um shell como Bash ou Zsh. Cada teste tem seu próprio `main()`. O comando compila e executa os quatro separadamente e para na primeira falha. Mantenha os `assert` habilitados.
+
+```sh
+(
+  set -e
+  mkdir -p build/tests
+  for fonte in tests/teste_*.cpp; do
+    nome=$(basename "$fonte" .cpp)
+    c++ -std=c++17 -Iinclude src/*.cpp "$fonte" -o "build/tests/$nome"
+    "build/tests/$nome"
+  done
+)
+```
+
+Para repetir apenas a montagem e execução dos dois exemplos, rode `./build/tests/teste_montador_cpu` na raiz depois de compilar. Os outros três testes verificam a CPU e as duas caches com programas em código de máquina.
+
 ## Resumo dos arquivos
 
 Os cabeçalhos em `include/` apresentam a interface de cada componente. A tabela reúne cada cabeçalho com sua implementação em `src/` e, ao final, lista os programas de teste em `tests/`.
+
+<details>
+<summary>Ver a descrição de cada arquivo</summary>
 
 | Arquivo | Descrição |
 |---|---|
@@ -175,9 +188,7 @@ Os cabeçalhos em `include/` apresentam a interface de cada componente. A tabela
 | [tests/teste_cache_dados.cpp](tests/teste_cache_dados.cpp) | Verifica a escrita imediata na RAM, a preservação da linha em um store com miss e a sincronização das duas caches quando um store modifica uma instrução. |
 | [tests/teste_montador_cpu.cpp](tests/teste_montador_cpu.cpp) | Monta os dois exemplos, confere o PC, os registradores e as caches, e verifica o diagnóstico de um rótulo ausente. |
 
-## Escopo do projeto
-
-A entrega inclui o montador, a CPU monociclo, as duas caches e a interface gráfica empacotada em Docker. A janela de caches apresenta contadores e resultados por acesso. A inspeção dos bytes da RAM e das linhas individuais de cache permanece fora da interface atual.
+</details>
 
 ## Referências
 

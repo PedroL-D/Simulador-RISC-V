@@ -1,6 +1,6 @@
 # Handoff do simulador RISC-V — 22/11/2026
 
-**Ponto de retomada.** A revisão `844954b` inclui a interface Dear ImGui ligada à CPU e a imagem Docker com acesso pelo navegador. Para a demonstração, abra o exemplo do laço e confira os dois programas pela tabela ao final. [Como iniciar o simulador](README.md#abrir-o-simulador-no-navegador)
+**Ponto de retomada.** A revisão `844954b` inclui a interface Dear ImGui ligada à CPU e a imagem Docker com acesso pelo navegador. A versão de trabalho acrescenta o datapath do último passo e o layout inicial que acomoda os 32 registradores. Para a demonstração, acompanhe o exemplo do laço pelo [guia de estudo e apresentação](docs/guia-de-estudo.md). [Como iniciar o simulador](README.md#abrir-o-simulador-no-navegador)
 
 No Mac do grupo, a cópia atual do repositório fica em **Sem Título/**. Para quem clonar do GitHub, os caminhos abaixo partem diretamente da raiz do clone.
 
@@ -33,15 +33,15 @@ No Mac do grupo, a cópia atual do repositório fica em **Sem Título/**. Para q
 
 ## Integração da interface
 
-A GUI mantém uma CPU com 4096 bytes de RAM. **Carregar** monta o arquivo, verifica se o programa cabe na RAM e inicializa a CPU. **Reset** restaura o programa já montado. **Passo** e **Executar** usam a mesma rotina de execução. A GUI compara os contadores antes e depois de `cpu.passo()` para distinguir hit, miss e ausência de acesso a dados. O diagrama usa esse resultado para colorir as caches. [Implementação da interface](gui/interface.cpp)
+A GUI mantém uma CPU com 4096 bytes de RAM. **Carregar** monta o arquivo, verifica se o programa cabe na RAM e inicializa a CPU. **Reset** restaura o programa já montado. **Passo** e **Executar** usam a mesma rotina de execução. A GUI compara os contadores antes e depois da execução para distinguir hit, miss e ausência de acesso a dados. O diagrama combina os hits e misses com os operandos, a palavra buscada, o resultado da ULA e o próximo PC obtidos de `passo_com_detalhes()`. A leitura para desenhar a janela preserva os contadores. **Programa** lista o código carregado. Quando um store altera uma instrução, **Ultimo passo** e o datapath usam a palavra efetivamente buscada. [Implementação da interface](gui/interface.cpp)
 
-O processo principal do container é `/app/simulador_gui`. O script prepara o display virtual `:99` em 1280 × 720, ativa o OpenGL por software, inicia o VNC na porta interna 5900 e serve o noVNC na 6080. A imagem inclui os dois exemplos em `/app/exemplos`. Os testes C++ são executados a partir do repositório. [Dockerfile](Dockerfile) · [Inicialização](docker/iniciar.sh) · [Arquivos excluídos do build](.dockerignore)
+O processo principal do container é `/app/simulador_gui`. O script prepara o display virtual `:99` em 1280 × 914, ativa o OpenGL por software, inicia o VNC na porta interna 5900 e serve o noVNC na 6080. A imagem inclui os dois exemplos em `/app/exemplos`. Os testes C++ são executados a partir do repositório. [Dockerfile](Dockerfile) · [Inicialização](docker/iniciar.sh) · [Arquivos excluídos do build](.dockerignore)
 
 ## Verificação de 22/11/2026
 
-- **Núcleo.** Os quatro testes C++17 passaram no Mac com os fontes de `844954b`, incluindo os dois exemplos Assembly e o diagnóstico de rótulo ausente. [Comandos dos testes](README.md#como-compilar-e-testar)
+- **Núcleo.** Os quatro testes C++17 foram recompilados e passaram no Mac com os fontes da versão de trabalho, incluindo os dois exemplos Assembly e o diagnóstico de rótulo ausente. [Comandos dos testes](README.md#como-compilar-e-testar)
 - **Container.** O workflow do commit `844954b` passou no Ubuntu 24.04. Ele construiu a imagem, iniciou o container, obteve resposta HTTP de `/vnc.html`, encontrou o processo da GUI e recebeu a assinatura RFB do servidor VNC. O workflow roda em pushes para `main`, em pull requests e por acionamento manual. [Execução aprovada](https://github.com/PedroL-D/Simulador-RISC-V/actions/runs/45030354900) · [Workflow](.github/workflows/docker.yml)
-- **Conferência visual.** O ambiente local desta revisão estava sem o executável Docker. O roteiro abaixo serve para conferir botões, valores e cores no navegador. O teste automatizado do container cobre a inicialização dos serviços.
+- **Conferência visual.** A [captura da interface nativa](docs/imagens/simulador-laco.png) registra o 12º passo do laço, com os 32 registradores e o datapath visíveis. A alteração do display virtual para 1280 × 914 ainda precisa de conferência visual pelo navegador. A execução do workflow citada acima corresponde ao commit anterior a esse ajuste.
 
 | Arquivo para abrir | Conferência na interface |
 |---|---|
@@ -50,8 +50,8 @@ O processo principal do container é `/app/simulador_gui`. O script prepara o di
 
 Os valores finais das duas caches estão na [tabela dos exemplos](README.md#exemplos-para-executar-por-passos).
 
-## Pontos para a próxima revisão
+## Sugestões para revisões futuras
 
-1. Conferir no navegador os dois exemplos acima, incluindo **Pausar** e **Reset**. Depois do reset, o PC e os contadores das duas caches devem voltar a zero.
-2. Conferir a exibição quando um store modifica uma instrução. A CPU busca a palavra atualizada, mas as janelas **Programa** e **Ultimo passo** usam a cópia montada no carregamento. Nesse caso, a palavra, o Assembly e os sinais exibidos podem divergir da execução. O teste de código alterado já exercita esse comportamento no núcleo. [Fonte dos dados da GUI](gui/interface.cpp) · [Teste da CPU com código modificado](tests/teste_cache_instrucoes.cpp)
-3. Se o enunciado exigir uma visão dos bytes da RAM ou das tags e do conteúdo das linhas, acrescentar uma consulta de inspeção que preserve os contadores ao redesenhar a tela. Hoje a GUI mostra os registradores e os resultados de acesso às caches. O ambiente entregue usa Docker. A exigência de uma máquina VirtualBox separada depende do enunciado da disciplina.
+1. **Inspecionar a RAM e as linhas de cache.** Uma consulta somente de leitura permitiria ver os bytes em 48 após o `sw` e a mudança de tag quando 64 e 192 disputam a linha 4. Abrir ou redesenhar o painel deve preservar os contadores.
+2. **Executar os quatro testes C++ no GitHub Actions.** O workflow atual verifica a inicialização do container. Rodar também os testes do núcleo facilitaria detectar mudanças no PC, nos registradores e nos contadores antes de integrar uma alteração.
+3. **Conferir a demonstração pelo noVNC.** Usar a tabela acima para repetir os dois exemplos no navegador, testar **Pausar** e **Reset** e conferir se o layout inicial exibe de `x0` a `x31`. Após o reset, PC e contadores devem voltar a zero.

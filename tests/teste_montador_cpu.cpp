@@ -21,8 +21,23 @@ static void testar_laco() {
     carregar(cpu, "exemplos/laco_memoria.txt", 6);
     // O branch volta ao endereço 4 duas vezes. Na terceira passagem, segue para o store.
     for (unsigned proximo_pc : {4u, 8u, 12u, 4u, 8u, 12u, 4u, 8u, 12u, 16u, 20u, 24u}) {
-        cpu.passo();
-        assert(cpu.ler_pc() == proximo_pc);
+        const auto passo = cpu.passo_com_detalhes();
+        assert(cpu.ler_pc() == proximo_pc && passo.pc_depois == proximo_pc);
+        switch (passo.pc) {
+            case 8: // ADDI t0,t0,-1: o operando A conserva o valor anterior à escrita.
+                assert(passo.operando_b == 0xffffffffu && passo.operando_a == passo.valor_rd + 1);
+                break;
+            case 12:
+                assert(passo.tomou_desvio == (proximo_pc == 4));
+                break;
+            case 16: // SW: endereço e dado têm origens diferentes.
+                assert(passo.sinais.escrever_memoria && passo.resultado_ula == 48 && passo.valor_rs2 == 6);
+                break;
+            case 20: // LW: o valor devolvido pela memória vai para a0.
+                assert(passo.sinais.ler_memoria && passo.resultado_ula == 48);
+                assert(passo.campos.rd == 10 && passo.valor_rd == 6);
+                break;
+        }
     }
     assert(cpu.ler_registrador(5) == 0 && cpu.ler_registrador(6) == 6);
     assert(cpu.ler_registrador(10) == 6); // a0 recebeu a soma lida no endereço 48.

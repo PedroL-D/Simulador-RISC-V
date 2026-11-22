@@ -36,7 +36,8 @@ int main() {
     codigo.carregar_instrucao(8, 0x00100113); // addi x2,x0,1 -> addi x2,x0,7
     codigo.passo();
     codigo.passo();
-    codigo.passo();
+    const auto modificado = codigo.passo_com_detalhes();
+    assert(modificado.palavra == 0x00700113 && modificado.imediato == 7);
     assert(codigo.ler_registrador(2) == 7);
     codigo.carregar_instrucao(12, 0x00900113); // recarga de código residente
     codigo.passo();

@@ -16,6 +16,10 @@ void CPU::carregar_instrucao(std::uint32_t endereco, std::uint32_t instrucao) {
 
 // inicio da execucao de uma instrucao
 void CPU::passo() {
+    passo_com_detalhes();
+}
+
+PassoCPU CPU::passo_com_detalhes() {
     // 1. BUSCA: o PC aponta para o primeiro dos 4 bytes da instrucao.
     // Ate o fim do passo, pc continua sendo o endereco da instrucao atual.
     const auto palavra = cache_instrucoes.buscar(memoria, pc);
@@ -39,11 +43,13 @@ void CPU::passo() {
     const auto sequencial = pc + 4u;    // calcula o end da instrucao seguinte
     auto proximo_pc = sequencial;   // suponhe que seguira em sequencia
 
+    bool tomou_desvio = false;
     // consulta do controle para escolher como a execucao deve prosseguir
     switch (sinais.proximo_pc) {
         case ProximoPC::SEQUENCIAL: break;
         case ProximoPC::DESVIO_CONDICIONAL: // entra no caso da branches
-            if (desvio_tomado(campos.funct3, resultado)) proximo_pc = pc + imediato;
+            tomou_desvio = desvio_tomado(campos.funct3, resultado);
+            if (tomou_desvio) proximo_pc = pc + imediato;
             break;
         case ProximoPC::JAL: proximo_pc = resultado; break; // ULA já calculou PC atual + imediato
         case ProximoPC::JALR: proximo_pc = resultado & ~1u; break;  // ULA já calculou rs1 + imediato
@@ -70,8 +76,8 @@ void CPU::passo() {
     // 6. ESCRITA E ATUALIZACAO DO PC: o controle seleciona o valor para rd.
     // Em JAL/JALR gravamos o endereco de retorno; em store a escrita em rd
     // esta desabilitada. O proprio banco preserva x0.
+    auto valor_rd = resultado;
     if (sinais.escrever_registrador) {  // se a inst eh escrita no reg
-        auto valor_rd = resultado;  // toma a saida da ULA como valor inicial para destino
         switch (sinais.origem_resultado) {  // consulta o controle
             case OrigemResultado::ULA: break;
             case OrigemResultado::MEMORIA: valor_rd = dado_lido; break;
@@ -79,5 +85,7 @@ void CPU::passo() {
         }
         registradores.escrever(campos.rd, valor_rd);
     }
+    const auto pc_antes = pc;
     pc = proximo_pc;
+    return {pc_antes, pc, palavra, campos, sinais, imediato, a, b, resultado, rs2, valor_rd, tomou_desvio};
 }
