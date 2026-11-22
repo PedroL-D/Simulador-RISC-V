@@ -16,6 +16,8 @@ Ao apresentar o simulador, abra o exemplo do laço e acompanhe uma pergunta até
 | Observar a hierarquia de memória | A busca de instrução e o acesso a dados ganharam caches separadas, cada uma com suas próprias linhas e contadores. Os dois exemplos exercitam a integração. | [Mapeamento comum](../src/cache_direta.cpp), [cache I](../src/cache_instrucoes.cpp) e [cache D](../src/cache_dados.cpp) |
 | Mostrar e distribuir | A interface associa cada clique a um passo da CPU e desenha o caminho percorrido. O container permite usar essa mesma aplicação pelo navegador. | [Interface](../gui/interface.cpp), [Dockerfile](../Dockerfile) e [inicialização](../docker/iniciar.sh) |
 
+A ISA define o efeito que um programa pode observar. Por exemplo, `lw` precisa entregar a palavra do endereço calculado ao registrador de destino. A microarquitetura define como realizar isso. Neste simulador, a ULA calcula o endereço e a cache D atende à leitura em um passo da CPU. O projeto RISC-V Azedinha discute a mesma distinção ao apresentar implementações monociclo e multiciclo em VHDL. [Visão geral do SoC](https://risc-v-azedinha.github.io/RISC-V/)
+
 ## 2. Como uma linha de texto vira uma instrução
 
 No [programa do laço](../exemplos/laco_memoria.txt), `t0`, `t1` e `a0` são nomes ABI para `x5`, `x6` e `x10`. São dois nomes para o mesmo registrador. O registrador `zero` é `x0` e sempre se lê como zero.
@@ -31,6 +33,22 @@ Na execução, o decoder extrai `opcode` dos bits 6–0, `rd` de 11–7, `funct3
 | S | O imediato do store vem em dois pedaços. O espaço usado por `rd` no formato R contém parte do deslocamento. O dado a gravar vem de `rs2`. |
 | B e J | Os bits do deslocamento estão distribuídos pela palavra. O gerador os reordena, coloca zero no bit menos significativo e estende o sinal. Assim um branch pode voltar oito bytes no laço. |
 | U | Os 20 bits superiores vão para as mesmas posições do resultado e os 12 inferiores ficam em zero. `LUI` e `AUIPC` usam esse imediato. |
+
+### Nomes e usos dos registradores
+
+O campo de registrador na instrução contém um número de 0 a 31. A ABI (*Application Binary Interface*) dá nomes a esses números e define convenções para chamadas de função. Nas janelas **Programa** e **Banco de Registradores**, `a0` e `x10` identificam o mesmo local. O zero permanente de `x0` é uma regra da arquitetura. [Registradores Risc-V, de Carlos Delfino](https://riscuinho.github.io/posts/registradores_no_risc-v/)
+
+| Registradores | Nomes ABI | Uso convencional |
+|---|---|---|
+| `x0` | `zero` | Fornece o valor zero. O banco descarta escritas nesse destino. |
+| `x1` | `ra` | Guarda o endereço de retorno quando a chamada usa `jal ra, alvo`. |
+| `x2` | `sp` | Aponta para a pilha. |
+| `x3`, `x4` | `gp`, `tp` | Ponteiros global e de thread, respectivamente. |
+| `x5–x7`, `x28–x31` | `t0–t2`, `t3–t6` | Temporários. Quem chama precisa salvar os valores que pretende usar depois da chamada. |
+| `x8–x9`, `x18–x27` | `s0–s1`, `s2–s11` | A função chamada deve preservar seus valores. `x8` também pode servir como ponteiro de quadro (`fp`). |
+| `x10–x17` | `a0–a7` | Argumentos de função. `a0` e `a1` também servem para devolver resultados. |
+
+Para estudar um mnemônico que aparece na janela **Programa**, consulte a tabela com um exemplo e o efeito de cada operação. [As 37 instruções do simulador](instrucoes.md)
 
 ## 3. Um passo completo, do PC ao registrador de destino
 
@@ -73,6 +91,10 @@ No mapeamento direto, divida o endereço por 16 para obter o número do bloco, c
 | Store com miss | Grava na RAM e preserva a linha que ocupava o índice. É *write-around*. |
 
 **Primeira demonstração.** No laço, a busca em 0 traz as instruções dos endereços 0, 4, 8 e 12. As duas voltas do branch reaproveitam esse bloco. A busca em 16 traz o segundo bloco, onde também está a instrução do endereço 20. Resultado de 12 buscas: **10 hits e 2 misses**. Na cache D, o store em 48 dá miss e escreve na RAM sem alocar. O load seguinte precisa trazer o bloco. Resultado de dois acessos: **0 hits e 2 misses**.
+
+![Caches no 7º passo. A busca lê os bytes +8 a +11 do bloco 1 na cache I. Na cache D, a linha 4 está válida, tem tag 0 e contém o bloco 4. O load lê FF FF 00 00 nas posições +0 a +3.](imagens/mapeamento-caches.png)
+
+Para ler a figura, siga o endereço 64. O índice escolhe a linha 4 da cache D. O bit de validade vale 1 e a tag da linha coincide com a tag 0 do endereço, confirmando o hit. A posição +0 indica o primeiro byte. Como a instrução é um `lw`, a CPU reúne quatro bytes consecutivos: `FF FF 00 00` em ordem de endereço formam a palavra `0x0000FFFF` (65535) em `a2`.
 
 **Segunda demonstração.** Abra o [exemplo de conflito](../exemplos/conflito_cache.txt). Os endereços 64 e 192 pertencem aos blocos 4 e 12. Os dois usam o índice 4 e têm tags 0 e 1. No 6º passo, o store em 192 dá miss e preserva o bloco de 64. No 7º, a leitura em 64 dá hit, o que permite demonstrar *write-around* na tela. No 8º, a leitura em 192 substitui a linha. No 9º, ler 64 novamente dá miss. Ao final, a cache D contabiliza **3 hits e 5 misses**.
 
