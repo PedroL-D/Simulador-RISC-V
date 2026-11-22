@@ -1,0 +1,7 @@
+.git
+.vscode
+build
+*.exe
+imgui.ini
+tests
+modelo-de-estudo

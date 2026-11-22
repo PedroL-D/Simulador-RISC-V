@@ -1,0 +1,48 @@
+name: Testar imagem Docker
+
+# Roda a cada push na main, em pull requests e manualmente (aba Actions > Run workflow).
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  docker:
+    runs-on: ubuntu-24.04
+    steps:
+      # Copia limpa do repositorio: se faltar algum arquivo no commit (ex.: imgui/), falha aqui.
+      - uses: actions/checkout@v4
+
+      - name: Construir a imagem
+        run: docker build -t simulador-riscv .
+
+      - name: Subir o container
+        run: docker run -d --name sim -p 6080:6080 simulador-riscv
+
+      - name: Esperar o noVNC responder
+        run: |
+          for i in $(seq 1 30); do
+            if curl -fs -o /dev/null http://localhost:6080/vnc.html; then
+              echo "noVNC respondeu apos ${i}s"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "noVNC nao respondeu em 30s"
+          exit 1
+
+      - name: Conferir que a GUI e o VNC estao de pe
+        run: |
+          sleep 5   # tempo para a GUI abrir e, se for cair, cair
+          docker top sim | grep -q simulador_gui
+          docker exec sim bash -c 'exec 3<>/dev/tcp/127.0.0.1/5900; head -c 3 <&3' | grep -q RFB
+          echo "GUI rodando e servidor VNC respondendo"
+
+      - name: Mostrar os logs do container
+        if: always()
+        run: docker logs sim
+
+      - name: Parar o container
+        if: always()
+        run: docker rm -f sim
