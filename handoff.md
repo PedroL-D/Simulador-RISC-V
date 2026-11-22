@@ -1,6 +1,6 @@
-# Handoff do simulador RISC-V — 21/11/2026
+# Handoff do simulador RISC-V — 22/11/2026
 
-**Ponto de retomada.** A CPU executa uma instrução por chamada a `passo()`, e o montador já traduz arquivos Assembly em palavras de 32 bits. A CPU busca código pela cache de instruções e executa loads e stores pela cache de dados.
+**Ponto de retomada.** A revisão `844954b` inclui a interface Dear ImGui ligada à CPU e a imagem Docker com acesso pelo navegador. Para a demonstração, abra o exemplo do laço e confira os dois programas pela tabela ao final. [Como iniciar o simulador](README.md#abrir-o-simulador-no-navegador)
 
 No Mac do grupo, a cópia atual do repositório fica em **Sem Título/**. Para quem clonar do GitHub, os caminhos abaixo partem diretamente da raiz do clone.
 
@@ -18,7 +18,9 @@ No Mac do grupo, a cópia atual do repositório fica em **Sem Título/**. Para q
 | 20/11 | Integração da CPU | `CPU::passo()` conectou busca, decodificação, ULA, acesso à RAM e escrita em registradores. Os testes passaram a executar pequenos programas em código de máquina. | `123295b` |
 | 21/11 | Montador | O grupo passou a escrever programas em Assembly com rótulos e a gerar as palavras que a CPU já sabia executar. | `d92832f` |
 | 21/11 | Cache de instruções | A busca pelo PC passou a consultar linhas de 16 bytes e a contar hits e misses. | `76ee6d9` |
-| 21/11 | Cache de dados e exemplos de integração | Loads e stores usam uma segunda cache. Dois programas Assembly exercitam o caminho do montador até a CPU. | Nesta entrega |
+| 21/11 | Cache de dados e exemplos de integração | Loads e stores usam uma segunda cache. Dois programas Assembly exercitam o caminho do montador até a CPU. | `d274496`, `6aefb4f` |
+| 22/11 | Interface gráfica e container | Pedro integrou os controles e seis painéis à CPU, incluiu o Dear ImGui e adicionou o ambiente Docker e a verificação no GitHub Actions. | `0d80517` |
+| 22/11 | Correção do build | O Dockerfile passou a compilar `gui/*.cpp`, incluindo o arquivo real `gui/interface.cpp`. | `844954b` |
 
 ## O que está funcionando
 
@@ -31,14 +33,15 @@ No Mac do grupo, a cópia atual do repositório fica em **Sem Título/**. Para q
 
 ## Integração da interface
 
-1. **Abrir o arquivo.** Monte o arquivo de texto com as instruções em Assembly com `montar_arquivo(caminho)`. Se houver erro, mostre a mensagem da exceção. O [arquivo de teste com rótulo ausente](tests/entradas/rotulo_ausente.txt) deve indicar a linha 2 e o nome `destino`.
-2. **Iniciar a sessão.** Crie uma CPU para o novo programa, carregue as palavras nos endereços 0, 4, 8… com `carregar_instrucao()` e mantenha essa instância entre os cliques. Os dois exemplos usam 256 bytes de RAM. O [trecho de integração no README](README.md#do-assembly-à-execução) mostra a chamada.
-3. **Executar um passo.** Chame `passo()` uma vez e leia `ler_pc()`, `ler_registrador(indice)`, `contadores_instrucoes()` e `contadores_dados()` para atualizar a tela. O PC retornado indica a próxima instrução. Nos exemplos, pare ao atingir `4 * palavras.size()`. Um laço pode executar mais passos que o número de palavras carregadas.
-4. **Inspecionar memória e caches.** A API pública atual expõe PC, registradores e contadores. Para exibir bytes da RAM ou validade, tag e conteúdo de cada linha, falta uma consulta somente de leitura. Essa consulta deve preservar linhas e contadores a cada atualização da tela.
+A GUI mantém uma CPU com 4096 bytes de RAM. **Carregar** monta o arquivo, verifica se o programa cabe na RAM e inicializa a CPU. **Reset** restaura o programa já montado. **Passo** e **Executar** usam a mesma rotina de execução. A GUI compara os contadores antes e depois de `cpu.passo()` para distinguir hit, miss e ausência de acesso a dados. O diagrama usa esse resultado para colorir as caches. [Implementação da interface](gui/interface.cpp)
 
-## Como conferir a entrega
+O processo principal do container é `/app/simulador_gui`. O script prepara o display virtual `:99` em 1280 × 720, ativa o OpenGL por software, inicia o VNC na porta interna 5900 e serve o noVNC na 6080. A imagem inclui os dois exemplos em `/app/exemplos`. Os testes C++ são executados a partir do repositório. [Dockerfile](Dockerfile) · [Inicialização](docker/iniciar.sh) · [Arquivos excluídos do build](.dockerignore)
 
-Rode os [comandos de compilação e teste](README.md#como-compilar-e-testar) na raiz. Os quatro executáveis passaram nesta revisão. O teste da CPU cobre memória, fluxo (inclusive AUIPC) e falhas de acesso. Os dois testes das caches cobrem conflitos, políticas de escrita e atualização de código. O [teste do montador com a CPU](tests/teste_montador_cpu.cpp) abre os mesmos arquivos que a interface pode carregar e verifica também um erro de montagem.
+## Verificação de 22/11/2026
+
+- **Núcleo.** Os quatro testes C++17 passaram no Mac com os fontes de `844954b`, incluindo os dois exemplos Assembly e o diagnóstico de rótulo ausente. [Comandos dos testes](README.md#como-compilar-e-testar)
+- **Container.** O workflow do commit `844954b` passou no Ubuntu 24.04. Ele construiu a imagem, iniciou o container, obteve resposta HTTP de `/vnc.html`, encontrou o processo da GUI e recebeu a assinatura RFB do servidor VNC. O workflow roda em pushes para `main`, em pull requests e por acionamento manual. [Execução aprovada](https://github.com/PedroL-D/Simulador-RISC-V/actions/runs/45030354900) · [Workflow](.github/workflows/docker.yml)
+- **Conferência visual.** O ambiente local desta revisão estava sem o executável Docker. O roteiro abaixo serve para conferir botões, valores e cores no navegador. O teste automatizado do container cobre a inicialização dos serviços.
 
 | Arquivo para abrir | Conferência na interface |
 |---|---|
@@ -47,7 +50,8 @@ Rode os [comandos de compilação e teste](README.md#como-compilar-e-testar) na 
 
 Os valores finais das duas caches estão na [tabela dos exemplos](README.md#exemplos-para-executar-por-passos).
 
-## Pendências para a entrega
+## Pontos para a próxima revisão
 
-1. Integrar e conferir o carregamento dos exemplos, o botão de passo e a exibição de estado na interface gráfica.
-2. Confirmar no enunciado o ambiente de entrega exigido (Docker, VirtualBox ou ambos) e testar o empacotamento a partir de uma cópia limpa.
+1. Conferir no navegador os dois exemplos acima, incluindo **Pausar** e **Reset**. Depois do reset, o PC e os contadores das duas caches devem voltar a zero.
+2. Conferir a exibição quando um store modifica uma instrução. A CPU busca a palavra atualizada, mas as janelas **Programa** e **Ultimo passo** usam a cópia montada no carregamento. Nesse caso, a palavra, o Assembly e os sinais exibidos podem divergir da execução. O teste de código alterado já exercita esse comportamento no núcleo. [Fonte dos dados da GUI](gui/interface.cpp) · [Teste da CPU com código modificado](tests/teste_cache_instrucoes.cpp)
+3. Se o enunciado exigir uma visão dos bytes da RAM ou das tags e do conteúdo das linhas, acrescentar uma consulta de inspeção que preserve os contadores ao redesenhar a tela. Hoje a GUI mostra os registradores e os resultados de acesso às caches. O ambiente entregue usa Docker. A exigência de uma máquina VirtualBox separada depende do enunciado da disciplina.

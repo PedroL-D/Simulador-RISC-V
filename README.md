@@ -2,6 +2,46 @@
 
 Projeto de Arquitetura de Computadores escrito em C++17. O simulador executa 37 instruções da base inteira de 32 bits do RISC-V (RV32I). Cada chamada a `CPU::passo()` executa uma instrução completa e permite observar a mudança no contador de programa (PC) e nos registradores.
 
+## Abrir o simulador no navegador
+
+Com o Docker em execução, rode na raiz do repositório:
+
+```sh
+docker build -t simulador-riscv .
+docker run -d --rm --name simulador-riscv -p 127.0.0.1:6080:6080 simulador-riscv
+```
+
+Abra a [interface local no navegador](http://localhost:6080/vnc.html?autoconnect=true&resize=scale). O navegador mostra a janela do simulador por noVNC. A aplicação roda dentro do container com renderização por software. A porta fica restrita ao computador local porque a sessão VNC dispensa senha.
+
+1. Ao iniciar, a janela **Controle da CPU** carrega `exemplos/laco_memoria.txt`. Clique em **Passo**. O PC deve ir de 0 para 4, `t0` deve receber 3 e a primeira busca deve aparecer como **MISS**.
+2. Use **Executar** para continuar, **Pausar** para interromper e **Passos/s** para ajustar a velocidade de 1 a 120 instruções por segundo. **Reset** recria a CPU e recarrega o programa desde o endereço zero.
+3. Para observar um conflito de cache, digite `exemplos/conflito_cache.txt` e clique em **Carregar**. O campo aceita um caminho dentro do container. Para experimentar um programa próprio, copie o arquivo com `docker cp meu_programa.txt simulador-riscv:/app/meu_programa.txt` e carregue `meu_programa.txt`.
+
+| Janela | O que observar |
+|---|---|
+| Controle da CPU | PC atual, caminho do arquivo, controles de execução e mensagens de término ou erro. |
+| Programa | Endereço, palavra de máquina e Assembly do programa carregado. A seta indica a próxima instrução. |
+| Banco de Registradores | Os 32 registradores com nome ABI, valor hexadecimal e decimal com sinal. O último destino de escrita aparece em verde. |
+| Ultimo passo | Instrução, campos decodificados, imediato, sinais de controle, registrador de destino e PC antes e depois do passo. |
+| Caches | Hits, misses, taxa de acerto e resultado do último passo para instruções e dados. |
+| Microarquitetura (Datapath) | Caminho simplificado entre PC, cache de instruções, ULA e cache de dados. As cores indicam os acessos do último passo. |
+
+Para encerrar, execute `docker stop simulador-riscv`. A opção `--rm` remove o container ao parar. A imagem pode ser usada de novo com o mesmo `docker run`.
+
+## Compilar e rodar no macOS
+
+Para abrir uma janela nativa, use o compilador das Command Line Tools do Xcode e as bibliotecas do Homebrew. Instale as dependências uma vez com `brew install glfw pkgconf`. Na raiz do repositório, compile o executável:
+
+```sh
+mkdir -p build && c++ -std=c++17 -O2 -DGL_SILENCE_DEPRECATION -Iinclude -Iimgui -Iimgui/backends \
+  $(pkg-config --cflags glfw3) src/*.cpp gui/interface.cpp imgui/imgui*.cpp \
+  imgui/backends/imgui_impl_glfw.cpp imgui/backends/imgui_impl_opengl3.cpp \
+  $(pkg-config --libs glfw3) -framework Cocoa -framework OpenGL -framework IOKit \
+  -o build/simulador_gui
+```
+
+Execute `./build/simulador_gui` a partir dessa mesma pasta para que a interface encontre `exemplos/laco_memoria.txt`. Nas próximas vezes, basta repetir esse comando. Recompile quando alterar o código C++.
+
 ## Como compilar e testar
 
 A partir da raiz do repositório, use um compilador C++17 e um shell como Bash ou Zsh. Cada teste tem seu próprio `main()`. O comando compila e executa os quatro separadamente e para na primeira falha. Mantenha os `assert` habilitados.
@@ -26,7 +66,7 @@ Os exemplos usam arquivos de texto `.txt` com uma instrução em Assembly por li
 
 Escreva os mnemônicos em minúsculas, uma instrução por linha, sem comentários. Use registradores numéricos (`x0` a `x31`) ou nomes ABI como `zero`, `t0` e `a0`. O montador aceita imediatos decimais e hexadecimais (`0x`), ignora linhas em branco e reconhece rótulos em linhas próprias, como `laco:`. Para loads e stores, use `lw a0, 48(zero)` e `sw t1, 48(zero)`. Para o salto por registrador, a sintaxe aceita é `jalr rd, rs1, imm`.
 
-Para abrir um programa na interface, use `montar_arquivo()` e carregue o vetor na CPU que receberá as chamadas a `passo()`. Este trecho usa as declarações de [montador.h](include/montador.h) e [cpu.h](include/cpu.h).
+Para reproduzir o carregamento em C++, use `montar_arquivo()` e carregue o vetor na CPU que receberá as chamadas a `passo()`. Este trecho usa as declarações de [montador.h](include/montador.h) e [cpu.h](include/cpu.h).
 
 ```cpp
 const auto palavras = montar_arquivo("exemplos/laco_memoria.txt");
@@ -43,7 +83,7 @@ A função `carregar_programa(caminho, memoria, inicio)` grava as palavras na in
 
 ### Exemplos para executar por passos
 
-Comece cada programa com uma nova `CPU(256)`, PC em zero e caches vazias. Encerre a execução dos exemplos quando o PC chegar ao endereço imediatamente após a última palavra. Cada clique em **Executar passo** corresponde a uma chamada a `passo()`.
+A interface usa 4096 bytes de RAM. Os testes destes exemplos usam 256 bytes e produzem os mesmos resultados. Carregar o programa ou clicar em **Reset** inicia a CPU com PC em zero e caches vazias. Cada clique em **Passo** executa uma instrução. A interface indica o fim quando o PC sai da área do código carregado.
 
 | Programa | O que observar | Estado ao terminar | Cache de instruções | Cache de dados |
 |---|---|---|---|---|
@@ -124,6 +164,12 @@ Os cabeçalhos em `include/` apresentam a interface de cada componente. A tabela
 | [src/cache_instrucoes.cpp](src/cache_instrucoes.cpp) | Busca os quatro bytes da instrução no endereço do PC e permite que o carregador escreva código sem incrementar o contador de buscas. |
 | [include/cache_dados.h](include/cache_dados.h) | Declara as operações de leitura e escrita da cache de dados e documenta as políticas *write-through* sem buffer e *write-around*. |
 | [src/cache_dados.cpp](src/cache_dados.cpp) | Encaminha os loads e stores à lógica de mapeamento direto. A leitura devolve os bytes para a CPU interpretar o sinal, e a escrita contabiliza o hit ou miss de dados. |
+| [gui/interface.cpp](gui/interface.cpp) | Cria as seis janelas em Dear ImGui e conecta os controles ao montador e à CPU. |
+| [imgui/](imgui/) | Inclui os fontes da biblioteca Dear ImGui e os backends GLFW e OpenGL3 usados para compilar a interface. |
+| [Dockerfile](Dockerfile) | Compila a aplicação C++17 no Ubuntu 24.04 e inclui os programas de exemplo na imagem. |
+| [docker/iniciar.sh](docker/iniciar.sh) | Inicia o display virtual Xvfb, o servidor x11vnc, a ponte websockify com noVNC e a aplicação gráfica. |
+| [.dockerignore](.dockerignore) | Exclui do contexto de build os testes, o modelo de estudo e artefatos locais. |
+| [.github/workflows/docker.yml](.github/workflows/docker.yml) | Constrói a imagem e verifica a inicialização do container no GitHub Actions. |
 | [tests/teste_cpu.cpp](tests/teste_cpu.cpp) | Executa programas em código de máquina para conferir loads, stores, extensão de sinal, desvios, saltos e falhas de acesso. |
 | [tests/teste_cache_instrucoes.cpp](tests/teste_cache_instrucoes.cpp) | Verifica buscas sequenciais, conflitos entre blocos e a próxima busca após uma escrita que modifica código presente na cache. |
 | [tests/teste_cache_dados.cpp](tests/teste_cache_dados.cpp) | Verifica a escrita imediata na RAM, a preservação da linha em um store com miss e a sincronização das duas caches quando um store modifica uma instrução. |
@@ -131,7 +177,7 @@ Os cabeçalhos em `include/` apresentam a interface de cada componente. A tabela
 
 ## Escopo do projeto
 
-O montador e a CPU já permitem executar programas em Assembly passo a passo pela interface C++. As próximas etapas previstas são a interface gráfica e o empacotamento do ambiente de execução.
+A entrega inclui o montador, a CPU monociclo, as duas caches e a interface gráfica empacotada em Docker. A janela de caches apresenta contadores e resultados por acesso. A inspeção dos bytes da RAM e das linhas individuais de cache permanece fora da interface atual.
 
 ## Referências
 
