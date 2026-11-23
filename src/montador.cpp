@@ -1,5 +1,4 @@
 /*
-Montador RV32I: transforma assembly em instrucoes de 32 bits.
 
 Entrada: arquivo texto, uma instrucao por linha, sem comentarios. Exemplos:
     addi x1, x0, 5

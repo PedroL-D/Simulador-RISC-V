@@ -26,5 +26,8 @@ COPY docker/iniciar.sh /iniciar.sh
 # Remove finais de linha do Windows (CRLF) caso o Git os tenha colocado no script
 RUN sed -i 's/\r$//' /iniciar.sh && chmod +x /iniciar.sh
 
+# Pagina inicial: abre o cliente noVNC ja conectado e ajustado ao tamanho da aba
+RUN echo '<meta http-equiv="refresh" content="0; url=vnc.html?autoconnect=true&amp;resize=scale">' > /usr/share/novnc/index.html
+
 EXPOSE 6080
 CMD ["/iniciar.sh"]
